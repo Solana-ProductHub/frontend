@@ -36,7 +36,7 @@ function List() {
       <div className="w-full h-full flex flex-col items-center justify-center">
         {!showForm && (
           <p className="mb-4 text-center text-gray-600 max-w-md">
-            Please connect your wallet to list your project. Connecting your
+            Please connect your wallet to list your project! Connecting your
             wallet helps us verify your identity and enables secure project
             submissions.
           </p>
