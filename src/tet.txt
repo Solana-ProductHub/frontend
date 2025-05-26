@@ -1,0 +1,244 @@
+import { Prisma } from "@prisma/client";
+import prisma from "../config/prisma";
+import { CreateProductPayload } from "../schemas/product.schema";
+
+export async function getAllPublishedProducts() {
+  return await prisma.$transaction(async (tx) => {
+    const publishedProducts = await tx.products.findMany({
+      where: { 
+        isPublished: true
+      },
+      select: {
+        uuid: true,
+        name: true,
+        bDescription: true,
+        description: true,
+        logoURI: true,
+        bannerURI: true,
+        country: true,
+        state: true,
+        track: true,
+        walletAddress: true,
+        community: true,
+        twitterURL: true,
+        telegramURL: true,
+        websiteURL: true,
+        documentationURL: true,
+        teamMembers: {
+          select: {
+            id: true,
+            name: true,
+            xHandle: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+
+    return publishedProducts;
+  });
+}
+
+export async function getAllProducts() {
+    return await prisma.$transaction(async (tx) => {
+      const allProducts = await tx.products.findMany({
+        select: {
+            uuid: true,
+            name: true,
+            bDescription: true,
+            description: true,
+            logoURI: true,
+            bannerURI: true,
+            country: true,
+            state: true,
+            track: true,
+            walletAddress: true,
+            community: true,
+            twitterURL: true,
+            telegramURL: true,
+            websiteURL: true,
+            documentationURL: true,
+            isPublished: true,
+            teamMembers: {
+              select: {
+                id: true,
+                name: true,
+                xHandle: true,
+              },
+            },
+            createdAt: true,
+            updatedAt: true,
+        },
+      });
+      return allProducts;
+    });
+}
+
+
+export async function createProduct(
+  data: Prisma.ProductsCreateInput,
+  userWalletAddress: string
+) {
+  const { teamMembers, ...productData } = data;
+
+  return await prisma.$transaction(async (tx) => {
+    // Fetch user
+    const user = await tx.users.findUnique({
+      where: { walletAddress: userWalletAddress }
+    });
+
+    if (!user) {
+      throw new Error("User doesn't exist");
+    }
+
+    // Check product name
+    const product = await tx.products.findUnique({
+      where: { 
+        walletAddress: productData.walletAddress, 
+        name: productData.name 
+      }
+    });
+
+    if (product) {
+      throw new Error("Product already exist");
+    }    
+
+    const newProduct = await prisma.products.create({
+      data: {
+        ...productData,
+        teamMembers: {
+            create: (teamMembers as any).map((member) => ({
+              name: member.name,
+              xHandle: member.xHandle,
+            })),
+        },
+        user: {
+          connect: {
+            id: user.id
+          }
+        }
+      },
+      select: {
+        uuid: true,
+        name: true,
+        bDescription: true,
+        description: true,
+        logoURI: true,
+        bannerURI: true,
+        country: true,
+        state: true,
+        track: true,
+        walletAddress: true,
+        community: true,
+        twitterURL: true,
+        telegramURL: true,
+        websiteURL: true,
+        documentationURL: true,
+        teamMembers: {
+          select: {
+            id: true,
+            name: true,
+            xHandle: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+
+    return newProduct;
+  })
+}
+
+-------------------------------------
+
+import { Role } from "@prisma/client";
+import bcrypt from "bcrypt";
+
+import prisma from "../config/prisma";
+import { CreateAdminPayload } from "../schemas/user.schema";
+
+export async function getOrCreateUser(
+  walletAddress: string | null,
+  role: Role = "USER"
+) {
+  return await prisma.$transaction(async (tx) => {
+    const existingUser = await tx.users.findUnique({
+      where: { walletAddress },
+      select: {
+        uuid: true,
+        walletAddress: true,
+        role: true,
+        createdAt: true
+      }
+    });
+
+    if (existingUser) {
+      return existingUser;
+    }
+
+    const newUser = await tx.users.create({
+      data: {
+        walletAddress,
+        role
+      },
+      select: {
+        uuid: true,
+        walletAddress: true,
+        role: true,
+        createdAt: true
+      }
+    });
+
+    return newUser;
+  });
+}
+
+export async function createAdminUser(adminPayload: CreateAdminPayload) {
+  if (!adminPayload.email || !adminPayload.password) {
+    throw new Error("Email and password are required for ADMIN users");
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const existingUser = await tx.users.findUnique({
+      where: { email: adminPayload.email }
+    });
+  
+    if (existingUser) {
+      throw new Error("Admin already exists");
+    }
+  
+    const hashedPassword = await bcrypt.hash(adminPayload.password, 10);   
+
+    const newUser = await tx.users.create({
+      data: {
+        email: adminPayload.email,
+        password: hashedPassword,
+        role: "ADMIN",
+      },
+      select: {
+        uuid: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        products: true,
+      },
+    });
+  
+    return newUser;
+  });
+}
+
+export async function verifyAdminPassword(adminPayload: CreateAdminPayload) {
+  const admin = await prisma.users.findUnique({
+    where: { email: adminPayload.email },
+  });
+
+  if (!admin || admin.role !== 'ADMIN') {
+    return null;
+  }
+
+  const isMatch = await bcrypt.compare(adminPayload.password, admin.password!);
+  return isMatch ? admin : null;
+}

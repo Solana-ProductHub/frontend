@@ -23,6 +23,7 @@ import { Minus, Plus, PlusIcon } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useAppKitAccount } from "@reown/appkit/react";
 
 const NIGERIAN_STATES = [
   "Abia",
@@ -86,12 +87,17 @@ const formSchema = z.object({
 });
 
 export default function ProjectForm() {
-  const [banner, setBanner] = useState<File | null>(null);
-  const [logo, setLogo] = useState<File | null>(null);
+  const [_banner, setBanner] = useState<File | null>(null);
+  const [_logo, setLogo] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([{ name: "", handle: "" }]);
+  const { isConnected, address } = useAppKitAccount();
 
+  const [_submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const ENDPOINT_URL = import.meta.env.VITE_ENDPOINT_URL;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -146,17 +152,99 @@ export default function ProjectForm() {
     setTeam(team.filter((_, i) => i !== idx));
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Combine form values with file uploads and team members
-    const formData = {
-      ...values,
-      banner,
-      logo,
-      team,
-    };
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!isConnected || !address) {
+      setSubmitError("Wallet not connected");
+      return;
+    }
 
-    console.log(formData);
-    alert("Form submitted!");
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // STEP 1: Fetch users and find current user by walletAddress
+      const usersRes = await fetch(`${ENDPOINT_URL}/api/users`);
+      const usersJson = await usersRes.json();
+
+      const userArray = Array.isArray(usersJson.data) ? usersJson.data : [];
+      const currentUser = userArray.find(
+        (u: { walletAddress: string }) => u.walletAddress === address
+      );
+
+      if (!currentUser) {
+        throw new Error("User not found. Please register first.");
+      }
+
+      const userUID = currentUser.uuid;
+
+      // STEP 2: Prepare image URLs (static or real upload)
+      const bannerURI = bannerPreview || "";
+      const logoURI = logoPreview || "";
+
+      // STEP 3: Format team members
+      const teamMembersFormatted = team
+        .filter((member) => member.name && member.handle)
+        .map((member) => ({
+          name: member.name,
+          xHandle: member.handle,
+        }));
+
+      // STEP 4: Prepare payload
+      const payload = {
+        name: values.productName,
+        bDescription: values.oneLiner,
+        description: values.description,
+        logoURI,
+        bannerURI,
+        country: "Nigeria",
+        state: values.state,
+        track: values.track,
+        walletAddress: address,
+        community: values.community || "",
+        twitterURL: values.twitter || "",
+        telegramURL: values.telegram || "",
+        websiteURL: values.website || "",
+        documentationURL: values.documentation || "",
+        teamMembers: teamMembersFormatted,
+      };
+
+      // STEP 5: POST to backend with proper endpoint
+      const createRes = await fetch(
+        `${ENDPOINT_URL}/api/products/${userUID}/new`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload, userUID),
+        }
+      );
+
+      // STEP 6: Check for JSON response and handle status
+      if (!createRes.ok) {
+        const text = await createRes.text();
+        throw new Error(`Request failed: ${createRes.status} - ${text}`);
+      }
+
+      const createResult = await createRes.json();
+
+      if (!createResult.status) {
+        throw new Error(createResult.message || "Failed to create product");
+      }
+
+      alert("Project successfully listed!");
+      form.reset();
+      setTeam([{ name: "", handle: "" }]);
+      setBanner(null);
+      setLogo(null);
+      setBannerPreview(null);
+      setLogoPreview(null);
+    } catch (err: any) {
+      console.error("Form submission error:", err);
+      setSubmitError(err.message || "An error occurred while submitting.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -457,8 +545,8 @@ export default function ProjectForm() {
               </Button>
             </div>
 
-            <Button type="submit" className="w-full">
-              Submit
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit"}
             </Button>
           </form>
         </Form>
