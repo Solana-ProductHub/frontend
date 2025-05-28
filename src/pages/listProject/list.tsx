@@ -8,45 +8,38 @@ function List() {
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [isCheckingUser, setIsCheckingUser] = useState(false);
-  const { address, isConnected, status } = useAppKitAccount();
+  const { address, isConnected } = useAppKitAccount();
 
   useEffect(() => {
     const checkOrCreateUser = async () => {
       if (!isConnected || !address) return;
-      
+
       setIsCheckingUser(true);
       try {
-        // First, check if user exists
-        const checkResponse = await fetch(
-          `${import.meta.env.VITE_ENDPOINT_URL}/api/user?walletAddress=${address}`
-        );
-        
-        if (checkResponse.status === 404) {
-          // User doesn't exist, create new user
-          const createResponse = await fetch(
-            `${import.meta.env.VITE_ENDPOINT_URL}/api/users/create`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ walletAddress: address }),
-            }
-          );
-          
-          if (!createResponse.ok) {
-            throw new Error("Failed to create user");
+        const response = await fetch(
+          `${import.meta.env.VITE_ENDPOINT_URL}/api/users/create`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ walletAddress: address }),
           }
-          console.log("New user created successfully");
-        } else if (!checkResponse.ok) {
-          throw new Error("Failed to check user existence");
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to check/create user");
         }
-        
-        // User exists or was created successfully
-        setShowForm(true);
+
+        const result = await response.json();
+        console.log("User check/create response:", result);
+
+        if (result?.status) {
+          setShowForm(true);
+        }
       } catch (error) {
-        console.error("Error handling user check/create:", error);
-        // Handle error appropriately (maybe show a toast notification)
+        console.error("Error during user check/create:", error);
+        // Optional: show a toast error here
       } finally {
         setIsCheckingUser(false);
       }
@@ -55,18 +48,8 @@ function List() {
     checkOrCreateUser();
   }, [isConnected, address]);
 
-  if (!isConnected) {
-    console.log("Wallet not connected");
-  } else if (isConnected && !address) {
-    console.log("Wallet connected but no wallet info available");
-  }
-
-  console.log("AppKit Account Address:", address);
-  console.log("AppKit Account Status:", status);
-
   return (
     <div className="flex flex-col items-center gap-4 justify-center py-16 w-full h-full">
-      {/* Back button at the top */}
       <button
         onClick={() => navigate("/")}
         style={{
@@ -94,11 +77,7 @@ function List() {
         )}
       </div>
       <WalletConnection />
-      {showForm && !isCheckingUser && (
-        <>
-          <ProjectForm />
-        </>
-      )}
+      {showForm && !isCheckingUser && <ProjectForm />}
     </div>
   );
 }

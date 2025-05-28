@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,57 +21,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, PlusIcon } from "lucide-react";
+import { Minus, Plus, PlusIcon, Calendar } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useAppKitAccount } from "@reown/appkit/react";
 
-const NIGERIAN_STATES = [
-  "Abia",
-  "Adamawa",
-  "Akwa Ibom",
-  "Anambra",
-  "Bauchi",
-  "Bayelsa",
-  "Benue",
-  "Borno",
-  "Cross River",
-  "Delta",
-  "Ebonyi",
-  "Edo",
-  "Ekiti",
-  "Enugu",
-  "FCT - Abuja",
-  "Gombe",
-  "Imo",
-  "Jigawa",
-  "Kaduna",
-  "Kano",
-  "Katsina",
-  "Kebbi",
-  "Kogi",
-  "Kwara",
-  "Lagos",
-  "Nasarawa",
-  "Niger",
-  "Ogun",
-  "Ondo",
-  "Osun",
-  "Oyo",
-  "Plateau",
-  "Rivers",
-  "Sokoto",
-  "Taraba",
-  "Yobe",
-  "Zamfara",
+const PRODUCT_STATES = [
+  "Ideas",
+  "MVP Testnet",
+  "MVP Mainnet",
+  "Working Product",
 ];
 
 const TRACKS = ["Defi", "Gaming", "Ai", "DePin", "Infra", "Consumers"];
 
 type TeamMember = {
   name: string;
-  handle: string;
+  xHandle: string;
+};
+
+type Milestone = {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+};
+
+type Achievement = {
+  description: string;
 };
 
 const formSchema = z.object({
@@ -83,7 +63,6 @@ const formSchema = z.object({
   telegram: z.string().url().optional().or(z.literal("")),
   documentation: z.string().url().optional().or(z.literal("")),
   wallet: z.string().optional(),
-  community: z.string().optional(),
 });
 
 export default function ProjectForm() {
@@ -91,7 +70,13 @@ export default function ProjectForm() {
   const [_logo, setLogo] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [team, setTeam] = useState<TeamMember[]>([{ name: "", handle: "" }]);
+  const [team, setTeam] = useState<TeamMember[]>([{ name: "", xHandle: "" }]);
+  const [milestones, setMilestones] = useState<Milestone[]>([
+    { title: "", description: "", startDate: "", endDate: "" },
+  ]);
+  const [achievements, setAchievements] = useState<Achievement[]>([
+    { description: "" },
+  ]);
   const { isConnected, address } = useAppKitAccount();
 
   const [_submitError, setSubmitError] = useState<string | null>(null);
@@ -112,7 +97,6 @@ export default function ProjectForm() {
       telegram: "",
       documentation: "",
       wallet: "",
-      community: "",
     },
   });
 
@@ -124,6 +108,26 @@ export default function ProjectForm() {
     const updatedTeam = [...team];
     updatedTeam[idx][field] = value;
     setTeam(updatedTeam);
+  };
+
+  const handleMilestoneChange = (
+    idx: number,
+    field: keyof Milestone,
+    value: string
+  ) => {
+    const updatedMilestones = [...milestones];
+    updatedMilestones[idx][field] = value;
+    setMilestones(updatedMilestones);
+  };
+
+  const handleAchievementChange = (
+    idx: number,
+    field: keyof Achievement,
+    value: string
+  ) => {
+    const updatedAchievements = [...achievements];
+    updatedAchievements[idx][field] = value;
+    setAchievements(updatedAchievements);
   };
 
   // Handle banner upload and preview
@@ -145,11 +149,30 @@ export default function ProjectForm() {
   };
 
   const addTeamMember = () => {
-    setTeam([...team, { name: "", handle: "" }]);
+    setTeam([...team, { name: "", xHandle: "" }]);
   };
 
   const removeTeamMember = (idx: number) => {
     setTeam(team.filter((_, i) => i !== idx));
+  };
+
+  const addMilestone = () => {
+    setMilestones([
+      ...milestones,
+      { title: "", description: "", startDate: "", endDate: "" },
+    ]);
+  };
+
+  const removeMilestone = (idx: number) => {
+    setMilestones(milestones.filter((_, i) => i !== idx));
+  };
+
+  const addAchievement = () => {
+    setAchievements([...achievements, { description: "" }]);
+  };
+
+  const removeAchievement = (idx: number) => {
+    setAchievements(achievements.filter((_, i) => i !== idx));
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -162,13 +185,41 @@ export default function ProjectForm() {
     setSubmitError(null);
 
     try {
-      // STEP 1: Fetch users and find current user by walletAddress
-      const usersRes = await fetch(`${ENDPOINT_URL}/api/users`);
+      const token = localStorage.getItem("token"); // Replace with your actual token access method
+
+      if (!token) {
+        throw new Error("Missing authentication token");
+      }
+
+      // STEP 1: Fetch all users with Bearer token
+      const usersRes = await fetch(`${ENDPOINT_URL}/api/users`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!usersRes.ok) {
+        const errText = await usersRes.text();
+        throw new Error(
+          `Failed to fetch users: ${usersRes.status} - ${errText}`
+        );
+      }
+
       const usersJson = await usersRes.json();
 
-      const userArray = Array.isArray(usersJson.data) ? usersJson.data : [];
+      const userArray: {
+        id: string;
+        uuid: string;
+        walletAddress: string;
+        role: string;
+        createdAt: string;
+      }[] = Array.isArray(usersJson.data) ? usersJson.data : [];
+
+      // STEP 2: Find current user by matching walletAddress
       const currentUser = userArray.find(
-        (u: { walletAddress: string }) => u.walletAddress === address
+        (u) => u.walletAddress.toLowerCase() === address.toLowerCase()
       );
 
       if (!currentUser) {
@@ -177,50 +228,71 @@ export default function ProjectForm() {
 
       const userUID = currentUser.uuid;
 
-      // STEP 2: Prepare image URLs (static or real upload)
+      // STEP 3: Prepare image URLs
       const bannerURI = bannerPreview || "";
       const logoURI = logoPreview || "";
 
-      // STEP 3: Format team members
+      // STEP 4: Format team members
       const teamMembersFormatted = team
-        .filter((member) => member.name && member.handle)
+        .filter((member) => member.name && member.xHandle)
         .map((member) => ({
           name: member.name,
-          xHandle: member.handle,
+          xHandle: member.xHandle,
         }));
 
-      // STEP 4: Prepare payload
+      // STEP 5: Format milestones
+      const milestonesFormatted = milestones
+        .filter((milestone) => milestone.title && milestone.description)
+        .map((milestone) => ({
+          title: milestone.title,
+          description: milestone.description,
+          startDate:
+            milestone.startDate || new Date().toISOString().split("T")[0],
+          endDate: milestone.endDate || new Date().toISOString().split("T")[0],
+        }));
+
+      // STEP 6: Format achievements
+      const achievementsFormatted = achievements
+        .filter((achievement) => achievement.description)
+        .map((achievement) => ({
+          description: achievement.description,
+        }));
+
+      // STEP 7: Prepare payload
       const payload = {
         name: values.productName,
         bDescription: values.oneLiner,
         description: values.description,
         logoURI,
         bannerURI,
-        country: "Nigeria",
         state: values.state,
         track: values.track,
-        walletAddress: address,
-        community: values.community || "",
-        twitterURL: values.twitter || "",
-        telegramURL: values.telegram || "",
-        websiteURL: values.website || "",
-        documentationURL: values.documentation || "",
+        walletAddress: values.wallet || address,
+        twitterURL: values.twitter || undefined,
+        telegramURL: values.telegram || undefined,
+        websiteURL: values.website || undefined,
+        status: "PENDING",
+        documentationURL: values.documentation || undefined,
         teamMembers: teamMembersFormatted,
+        milestones:
+          milestonesFormatted.length > 0 ? milestonesFormatted : undefined,
+        achievements:
+          achievementsFormatted.length > 0 ? achievementsFormatted : undefined,
       };
 
-      // STEP 5: POST to backend with proper endpoint
+      // STEP 8: Submit to backend using user's uuid
       const createRes = await fetch(
-        `${ENDPOINT_URL}/api/products/${userUID}/new`,
+        `${ENDPOINT_URL}/api/products/${userUID}/create`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(payload, userUID),
+          body: JSON.stringify(payload),
         }
       );
 
-      // STEP 6: Check for JSON response and handle status
       if (!createRes.ok) {
         const text = await createRes.text();
         throw new Error(`Request failed: ${createRes.status} - ${text}`);
@@ -234,7 +306,11 @@ export default function ProjectForm() {
 
       alert("Project successfully listed!");
       form.reset();
-      setTeam([{ name: "", handle: "" }]);
+      setTeam([{ name: "", xHandle: "" }]);
+      setMilestones([
+        { title: "", description: "", startDate: "", endDate: "" },
+      ]);
+      setAchievements([{ description: "" }]);
       setBanner(null);
       setLogo(null);
       setBannerPreview(null);
@@ -320,7 +396,7 @@ export default function ProjectForm() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {NIGERIAN_STATES.map((state) => (
+                        {PRODUCT_STATES.map((state) => (
                           <SelectItem key={state} value={state}>
                             {state}
                           </SelectItem>
@@ -369,7 +445,7 @@ export default function ProjectForm() {
                 >
                   {bannerPreview ? (
                     <img
-                      src={bannerPreview}
+                      src={bannerPreview || "/placeholder.svg"}
                       alt="Banner Preview"
                       className="object-cover self-center item-center w-full h-full rounded-lg"
                     />
@@ -397,7 +473,7 @@ export default function ProjectForm() {
                 >
                   {logoPreview ? (
                     <img
-                      src={logoPreview}
+                      src={logoPreview || "/placeholder.svg"}
                       alt="Logo Preview"
                       className="object-cover w-full h-full rounded-full"
                     />
@@ -473,33 +549,18 @@ export default function ProjectForm() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="wallet"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Wallet Address (Solana)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Solana wallet address" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="community"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Community</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Community details" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="wallet"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Wallet Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Wallet address" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <div className="space-y-4">
               <FormLabel>Team Members</FormLabel>
@@ -512,16 +573,14 @@ export default function ProjectForm() {
                       handleTeamChange(idx, "name", e.target.value)
                     }
                     className="flex-1"
-                    required
                   />
                   <Input
                     placeholder="X Handle"
-                    value={member.handle}
+                    value={member.xHandle}
                     onChange={(e) =>
-                      handleTeamChange(idx, "handle", e.target.value)
+                      handleTeamChange(idx, "xHandle", e.target.value)
                     }
                     className="flex-1"
-                    required
                   />
                   {team.length > 1 && (
                     <Button
@@ -542,6 +601,117 @@ export default function ProjectForm() {
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" /> Add Team Member
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <FormLabel className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Milestones (Optional)
+              </FormLabel>
+              {milestones.map((milestone, idx) => (
+                <div key={idx} className="space-y-3 p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Input
+                      placeholder="Milestone title"
+                      value={milestone.title}
+                      onChange={(e) =>
+                        handleMilestoneChange(idx, "title", e.target.value)
+                      }
+                      className="flex-1"
+                    />
+                    {milestones.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removeMilestone(idx)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <Textarea
+                    placeholder="Milestone description"
+                    value={milestone.description}
+                    onChange={(e) =>
+                      handleMilestoneChange(idx, "description", e.target.value)
+                    }
+                    className="min-h-[80px]"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <FormLabel className="text-sm">Start Date</FormLabel>
+                      <Input
+                        type="date"
+                        value={milestone.startDate}
+                        onChange={(e) =>
+                          handleMilestoneChange(
+                            idx,
+                            "startDate",
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <FormLabel className="text-sm">End Date</FormLabel>
+                      <Input
+                        type="date"
+                        value={milestone.endDate}
+                        onChange={(e) =>
+                          handleMilestoneChange(idx, "endDate", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addMilestone}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" /> Add Milestone
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <FormLabel>Achievements (Optional)</FormLabel>
+              {achievements.map((achievement, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <Textarea
+                    placeholder="Achievement description"
+                    value={achievement.description}
+                    onChange={(e) =>
+                      handleAchievementChange(
+                        idx,
+                        "description",
+                        e.target.value
+                      )
+                    }
+                    className="flex-1 min-h-[80px]"
+                  />
+                  {achievements.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => removeAchievement(idx)}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addAchievement}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" /> Add Achievement
               </Button>
             </div>
 
