@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import axios from "axios";
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,8 +67,8 @@ const formSchema = z.object({
 });
 
 export default function ProjectForm() {
-  const [_banner, setBanner] = useState<File | null>(null);
-  const [_logo, setLogo] = useState<File | null>(null);
+  const [bannerURI, setBanner] = useState<File | null>(null);
+  const [logoURI, setLogo] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([{ name: "", xHandle: "" }]);
@@ -130,19 +131,17 @@ export default function ProjectForm() {
     setAchievements(updatedAchievements);
   };
 
-  // Handle banner upload and preview
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    if (file) {
       setBanner(file);
       setBannerPreview(URL.createObjectURL(file));
     }
   };
 
-  // Handle logo upload and preview
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    if (file) {
       setLogo(file);
       setLogoPreview(URL.createObjectURL(file));
     }
@@ -185,18 +184,16 @@ export default function ProjectForm() {
     setSubmitError(null);
 
     try {
-      const token = localStorage.getItem("token"); // Replace with your actual token access method
-
+      const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("Missing authentication token");
       }
 
-      // STEP 1: Fetch all users with Bearer token
+      // Fetch user data
       const usersRes = await fetch(`${ENDPOINT_URL}/api/users`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
       });
 
@@ -208,18 +205,10 @@ export default function ProjectForm() {
       }
 
       const usersJson = await usersRes.json();
-
-      const userArray: {
-        id: string;
-        uuid: string;
-        walletAddress: string;
-        role: string;
-        createdAt: string;
-      }[] = Array.isArray(usersJson.data) ? usersJson.data : [];
-
-      // STEP 2: Find current user by matching walletAddress
+      const userArray = Array.isArray(usersJson.data) ? usersJson.data : [];
       const currentUser = userArray.find(
-        (u) => u.walletAddress.toLowerCase() === address.toLowerCase()
+        (u: { walletAddress: string }) =>
+          u.walletAddress.toLowerCase() === address.toLowerCase()
       );
 
       if (!currentUser) {
@@ -228,82 +217,82 @@ export default function ProjectForm() {
 
       const userUID = currentUser.uuid;
 
-      // STEP 3: Prepare image URLs
-      const bannerURI = bannerPreview || "";
-      const logoURI = logoPreview || "";
+      // Prepare form data
+      const formData = new FormData();
 
-      // STEP 4: Format team members
-      const teamMembersFormatted = team
-        .filter((member) => member.name && member.xHandle)
-        .map((member) => ({
-          name: member.name,
-          xHandle: member.xHandle,
-        }));
+      // Append basic fields
+      formData.append("name", values.productName);
+      formData.append("bDescription", values.oneLiner);
+      formData.append("description", values.description);
+      formData.append("state", values.state);
+      formData.append("track", values.track);
+      formData.append("walletAddress", values.wallet || address);
+      formData.append("status", "PENDING");
 
-      // STEP 5: Format milestones
-      const milestonesFormatted = milestones
-        .filter((milestone) => milestone.title && milestone.description)
-        .map((milestone) => ({
-          title: milestone.title,
-          description: milestone.description,
-          startDate:
-            milestone.startDate || new Date().toISOString().split("T")[0],
-          endDate: milestone.endDate || new Date().toISOString().split("T")[0],
-        }));
+      // Append optional URLs
+      if (values.twitter) formData.append("twitterURL", values.twitter);
+      if (values.telegram) formData.append("telegramURL", values.telegram);
+      if (values.website) formData.append("websiteURL", values.website);
+      if (values.documentation)
+        formData.append("documentationURL", values.documentation);
 
-      // STEP 6: Format achievements
-      const achievementsFormatted = achievements
-        .filter((achievement) => achievement.description)
-        .map((achievement) => ({
-          description: achievement.description,
-        }));
+      // Append files if they exist
+      if (bannerURI) formData.append("bannerURI", bannerURI);
+      if (logoURI) formData.append("logoURI", logoURI);
 
-      // STEP 7: Prepare payload
-      const payload = {
-        name: values.productName,
-        bDescription: values.oneLiner,
-        description: values.description,
-        logoURI,
-        bannerURI,
-        state: values.state,
-        track: values.track,
-        walletAddress: values.wallet || address,
-        twitterURL: values.twitter || undefined,
-        telegramURL: values.telegram || undefined,
-        websiteURL: values.website || undefined,
-        status: "PENDING",
-        documentationURL: values.documentation || undefined,
-        teamMembers: teamMembersFormatted,
-        milestones:
-          milestonesFormatted.length > 0 ? milestonesFormatted : undefined,
-        achievements:
-          achievementsFormatted.length > 0 ? achievementsFormatted : undefined,
-      };
-
-      // STEP 8: Submit to backend using user's uuid
-      const createRes = await fetch(
-        `${ENDPOINT_URL}/api/products/${userUID}/create`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
+      // Append arrays as JSON strings
+      formData.append(
+        "teamMembers",
+        JSON.stringify(
+          team
+            .filter((member) => member.name && member.xHandle)
+            .map((member) => ({
+              name: member.name,
+              xHandle: member.xHandle,
+            }))
+        )
       );
 
-      if (!createRes.ok) {
-        const text = await createRes.text();
-        throw new Error(`Request failed: ${createRes.status} - ${text}`);
-      }
+      formData.append(
+        "milestones",
+        JSON.stringify(
+          milestones
+            .filter((milestone) => milestone.title && milestone.description)
+            .map((milestone) => ({
+              title: milestone.title,
+              description: milestone.description,
+              startDate:
+                milestone.startDate || new Date().toISOString().split("T")[0],
+              endDate:
+                milestone.endDate || new Date().toISOString().split("T")[0],
+            }))
+        )
+      );
 
-      const createResult = await createRes.json();
+      formData.append(
+        "achievements",
+        JSON.stringify(
+          achievements
+            .filter((achievement) => achievement.description)
+            .map((achievement) => ({
+              description: achievement.description,
+            }))
+        )
+      );
+
+      // Submit form
+      const createRes = await axios.post(
+        `${ENDPOINT_URL}/api/products/${userUID}/create`,
+        formData,
+      );
+
+      const createResult = createRes.data;
 
       if (!createResult.status) {
         throw new Error(createResult.message || "Failed to create product");
       }
 
+      // Reset form on success
       alert("Project successfully listed!");
       form.reset();
       setTeam([{ name: "", xHandle: "" }]);
