@@ -180,40 +180,32 @@ export default function ProjectForm() {
       return;
     }
 
+    console.log('submitting')
+
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Missing authentication token");
-      }
-
       // Fetch user data
-      const usersRes = await fetch(`${ENDPOINT_URL}/api/users`, {
-        method: "GET",
+      const usersRes = await fetch(`${ENDPOINT_URL}/api/users/create`, {
+        method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
+        body: JSON.stringify({
+          walletAddress: address
+        })
       });
 
       if (!usersRes.ok) {
         const errText = await usersRes.text();
         throw new Error(
-          `Failed to fetch users: ${usersRes.status} - ${errText}`
+          `Failed to get users: ${usersRes.status} - ${errText}`
         );
       }
 
-      const usersJson = await usersRes.json();
-      const userArray = Array.isArray(usersJson.data) ? usersJson.data : [];
-      const currentUser = userArray.find(
-        (u: { walletAddress: string }) =>
-          u.walletAddress.toLowerCase() === address.toLowerCase()
-      );
-
-      if (!currentUser) {
-        throw new Error("User not found. Please register first.");
-      }
+      const userData = await usersRes.json();
+      const currentUser = userData.data;
 
       const userUID = currentUser.uuid;
 
@@ -227,7 +219,6 @@ export default function ProjectForm() {
       formData.append("state", values.state);
       formData.append("track", values.track);
       formData.append("walletAddress", values.wallet || address);
-      formData.append("status", "PENDING");
 
       // Append optional URLs
       if (values.twitter) formData.append("twitterURL", values.twitter);
@@ -237,8 +228,8 @@ export default function ProjectForm() {
         formData.append("documentationURL", values.documentation);
 
       // Append files if they exist
-      if (bannerURI) formData.append("bannerURI", bannerURI);
-      if (logoURI) formData.append("logoURI", logoURI);
+      formData.append("bannerURI", bannerURI || "");
+      formData.append("logoURI", logoURI || "");
 
       // Append arrays as JSON strings
       formData.append(
@@ -253,32 +244,37 @@ export default function ProjectForm() {
         )
       );
 
-      formData.append(
-        "milestones",
-        JSON.stringify(
-          milestones
-            .filter((milestone) => milestone.title && milestone.description)
-            .map((milestone) => ({
-              title: milestone.title,
-              description: milestone.description,
-              startDate:
-                milestone.startDate || new Date().toISOString().split("T")[0],
-              endDate:
-                milestone.endDate || new Date().toISOString().split("T")[0],
-            }))
-        )
-      );
+      // Append if it exists
+      if (milestones.length) {
+        formData.append(
+          "milestones",
+          JSON.stringify(
+            milestones
+              .filter((milestone) => milestone.title && milestone.description)
+              .map((milestone) => ({
+                title: milestone.title,
+                description: milestone.description,
+                startDate:
+                  milestone.startDate || new Date().toISOString().split("T")[0],
+                endDate:
+                  milestone.endDate || new Date().toISOString().split("T")[0],
+              }))
+          )
+        );
+      }
 
-      formData.append(
-        "achievements",
-        JSON.stringify(
-          achievements
-            .filter((achievement) => achievement.description)
-            .map((achievement) => ({
-              description: achievement.description,
-            }))
-        )
-      );
+      if (achievements.length) {
+        formData.append(
+          "achievements",
+          JSON.stringify(
+            achievements
+              .filter((achievement) => achievement.description)
+              .map((achievement) => ({
+                description: achievement.description,
+              }))
+          )
+        );
+      }
 
       // Submit form
       const createRes = await axios.post(
@@ -287,6 +283,7 @@ export default function ProjectForm() {
       );
 
       const createResult = createRes.data;
+      console.log(createRes);
 
       if (!createResult.status) {
         throw new Error(createResult.message || "Failed to create product");
@@ -294,16 +291,16 @@ export default function ProjectForm() {
 
       // Reset form on success
       alert("Project successfully listed!");
-      form.reset();
-      setTeam([{ name: "", xHandle: "" }]);
-      setMilestones([
-        { title: "", description: "", startDate: "", endDate: "" },
-      ]);
-      setAchievements([{ description: "" }]);
-      setBanner(null);
-      setLogo(null);
-      setBannerPreview(null);
-      setLogoPreview(null);
+      // form.reset();
+      // setTeam([{ name: "", xHandle: "" }]);
+      // setMilestones([
+      //   { title: "", description: "", startDate: "", endDate: "" },
+      // ]);
+      // setAchievements([{ description: "" }]);
+      // setBanner(null);
+      // setLogo(null);
+      // setBannerPreview(null);
+      // setLogoPreview(null);
     } catch (err: any) {
       console.error("Form submission error:", err);
       setSubmitError(err.message || "An error occurred while submitting.");
