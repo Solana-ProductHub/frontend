@@ -87,7 +87,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
       role="button"
       aria-label={`View details for ${project.name}`}
     >
-      <Card className="overflow-hidden h-full border-none shadow-md hover:shadow-xl transition-shadow duration-300">
+      <Card className="overflow-hidden py-0 h-full border-none shadow-md hover:shadow-xl transition-shadow duration-300">
         <div className="relative">
           {/* Banner with overlay gradient */}
           <div className="h-32 relative overflow-hidden rounded-t-lg bg-gradient-to-br from-slate-100 to-slate-200">
@@ -167,7 +167,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-[#1da1f2] hover:text-[#1da1f2]/80 hover:bg-[#1da1f2]/10"
+                  className="h-8 w-8 cursor-pointer text-[#1da1f2] hover:text-[#1da1f2]/80 hover:bg-[#1da1f2]/10"
                   onClick={(e) => handleSocialClick(e, project.twitterURL!)}
                 >
                   <Twitter className="h-4 w-4" />
@@ -178,7 +178,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-[#0088cc] hover:text-[#0088cc]/80 hover:bg-[#0088cc]/10"
+                  className="h-8 w-8 cursor-pointer text-[#0088cc] hover:text-[#0088cc]/80 hover:bg-[#0088cc]/10"
                   onClick={(e) => handleSocialClick(e, project.telegramURL!)}
                 >
                   <MessageCircle className="h-4 w-4" />
@@ -189,7 +189,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-600 hover:text-slate-600/80 hover:bg-slate-100"
+                  className="h-8 w-8 cursor-pointer text-slate-600 hover:text-slate-600/80 hover:bg-slate-100"
                   onClick={(e) => handleSocialClick(e, project.websiteURL!)}
                 >
                   <Globe className="h-4 w-4" />
@@ -200,7 +200,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-600 hover:text-slate-600/80 hover:bg-slate-100"
+                  className="h-8 w-8 cursor-pointer text-slate-600 hover:text-slate-600/80 hover:bg-slate-100"
                   onClick={(e) => handleSocialClick(e, project.documentationURL!)}
                 >
                   <FileText className="h-4 w-4" />
@@ -208,7 +208,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
               )}
             </div>
 
-            <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs font-medium text-primary hover:text-primary">
+            <Button variant="ghost" size="sm" className="h-8 cursor-pointer gap-1 text-xs font-medium text-primary hover:text-primary">
               View
               <ArrowUpRight className="h-3 w-3" />
             </Button>

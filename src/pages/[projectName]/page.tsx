@@ -321,7 +321,7 @@ export default function ProjectDetails() {
                   rel="noopener noreferrer"
                 >
                   <Twitter className="mr-2 h-4 w-4" />
-                  Twitter
+                  X
                 </a>
               </Button>
             )}
@@ -451,7 +451,7 @@ export default function ProjectDetails() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8 opacity-0 cursor-pointer group-hover:opacity-100 transition-opacity"
                       onClick={() => copyToClipboard(project.walletAddress)}
                     >
                       {copied ? (
@@ -495,7 +495,7 @@ export default function ProjectDetails() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="w-full">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid sm:grid-cols-1 grid-cols-2 gap-4">
                       {project.teamMembers.map((member, index) => (
                         <motion.div
                           key={index}

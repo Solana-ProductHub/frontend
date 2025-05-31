@@ -27,6 +27,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useAppKitAccount } from "@reown/appkit/react";
+import { toast } from "sonner";
 
 const PRODUCT_STATES = [
   "Ideas",
@@ -180,7 +181,7 @@ export default function ProjectForm() {
       return;
     }
 
-    console.log('submitting')
+    console.log("submitting");
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -190,18 +191,16 @@ export default function ProjectForm() {
       const usersRes = await fetch(`${ENDPOINT_URL}/api/users/create`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          walletAddress: address
-        })
+          walletAddress: address,
+        }),
       });
 
       if (!usersRes.ok) {
         const errText = await usersRes.text();
-        throw new Error(
-          `Failed to get users: ${usersRes.status} - ${errText}`
-        );
+        throw new Error(`Failed to get users: ${usersRes.status} - ${errText}`);
       }
 
       const userData = await usersRes.json();
@@ -279,7 +278,7 @@ export default function ProjectForm() {
       // Submit form
       const createRes = await axios.post(
         `${ENDPOINT_URL}/api/products/${userUID}/create`,
-        formData,
+        formData
       );
 
       const createResult = createRes.data;
@@ -290,17 +289,8 @@ export default function ProjectForm() {
       }
 
       // Reset form on success
-      alert("Project successfully listed!");
-      // form.reset();
-      // setTeam([{ name: "", xHandle: "" }]);
-      // setMilestones([
-      //   { title: "", description: "", startDate: "", endDate: "" },
-      // ]);
-      // setAchievements([{ description: "" }]);
-      // setBanner(null);
-      // setLogo(null);
-      // setBannerPreview(null);
-      // setLogoPreview(null);
+      toast("Project successfully listed!");
+      window.location.reload();
     } catch (err: any) {
       console.error("Form submission error:", err);
       setSubmitError(err.message || "An error occurred while submitting.");
