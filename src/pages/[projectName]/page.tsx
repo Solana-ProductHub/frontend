@@ -703,13 +703,13 @@ function DonateModal({
     try {
       const senderTokenAccount = await getUSDAccount(wallet);
       const tokenAccountInfo = await getAccount(connection, senderTokenAccount);
-      const usdtBalance = Number(tokenAccountInfo.amount) / 1_000_000_000; // USDT has 6 decimals
+      const usdtBalance = Number(tokenAccountInfo.amount) / 100_000_000; // USDT has 6 decimals
 
       if (Number(usdtBalance) < Number(amount) || usdtBalance == 0) {
         return toast.error('Insufficient USDT balance');
       }
 
-      const tokenAmount = Math.floor(Number(amount) * 1_000_000); // Convert to smallest unit (6 decimals for USDT)
+      const tokenAmount = Math.floor(Number(amount) * 100_000_000); // Convert to smallest unit (6 decimals for USDT)
       const fee = tokenAmount * 0.1;
       const donationAmount = tokenAmount - fee;
 
@@ -729,9 +729,7 @@ function DonateModal({
         )
       }
 
-      // const projectWallet = new PublicKey(projectAddress)
-      console.log(projectAddress)
-      const projectWallet = new PublicKey("BQrfUFEYzrftDHwWQnyAPFTqZdaN2wjSSjPLiTYHh6eW");
+      const projectWallet = new PublicKey(projectAddress);
       const projectATA = await getUSDAccount(projectWallet)
       if (!await connection.getAccountInfo(projectATA)) {
         transactionInstructions.push(
@@ -769,14 +767,21 @@ function DonateModal({
       transaction.recentBlockhash = latestBlockHash?.blockhash;
 
       const signature = await walletProvider.signAndSendTransaction(transaction, {skipPreflight: false})
-      const confirmedTx = await connection.confirmTransaction({
-        strategy: {
-          abortSignal: new AbortController().signal,
-          signature,
-        },
-        commitment: 'confirmed'
-      });
+      console.log("Transaction signature:", signature);
+      if (!signature) {
+        return toast.error('Transaction failed to send');
+      }
 
+      // Confirm the transaction
+      console.log("Waiting for transaction confirmation...");
+      const confirmedTx = await connection.confirmTransaction(signature, 'confirmed');
+      if (confirmedTx.value.err) {
+        console.error("Transaction failed:", confirmedTx.value.err);
+        return toast.error('Transaction failed');
+      }
+
+      toast.success('Donation successful! Thank you for your support!');
+      setIsDonateModalOpen(false);
     } catch (error) {
         console.log(error)
         return toast.error('Deposit USDT to your wallet before donating');
