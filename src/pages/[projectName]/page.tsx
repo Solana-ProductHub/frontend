@@ -26,6 +26,7 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { Input } from "@/components/ui/input";
 
 // API Response Types
 type TeamMember = {
@@ -69,6 +70,7 @@ type Project = {
 };
 
 export default function ProjectDetails() {
+  const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
@@ -227,6 +229,8 @@ export default function ProjectDetails() {
         </div>
       </div>
 
+      {isDonateModalOpen && <DonateModal setIsDonateModalOpen={setIsDonateModalOpen}/>}
+
       <main className="mx-auto max-w-6xl mt-4">
         {/* Banner Image */}
         <motion.div
@@ -351,7 +355,7 @@ export default function ProjectDetails() {
           <div className="lg:col-span-2">
             {/* Main Content - Always Visible */}
             <div className="space-y-6">
-              <Card className="border border-[1px] flex flex-col justify-start items-start">
+              <Card className="border flex flex-col justify-start items-start">
                 <CardHeader className="pb-2 w-full">
                   <CardTitle className="flex items-center text-left">
                     <Info className="h-5 w-5 mr-2 text-primary" />
@@ -366,7 +370,7 @@ export default function ProjectDetails() {
               </Card>
 
               {project.milestones && project.milestones.length > 0 && (
-                <Card className="border border-[1px] flex flex-col justify-start items-start">
+                <Card className="border flex flex-col justify-start items-start">
                   <CardHeader className="pb-2 w-full">
                     <CardTitle className="flex items-center text-left">
                       <Target className="h-5 w-5 mr-2 text-primary" />
@@ -406,7 +410,7 @@ export default function ProjectDetails() {
               )}
 
               {project.achievements && project.achievements.length > 0 && (
-                <Card className="border border-[1px] flex flex-col justify-start items-start">
+                <Card className="border flex flex-col justify-start items-start">
                   <CardHeader className="pb-2 w-full">
                     <CardTitle className="flex items-center text-left">
                       <Trophy className="h-5 w-5 mr-2 text-primary" />
@@ -484,8 +488,13 @@ export default function ProjectDetails() {
                     </Button>
                   </div>
                 )}
+
+                <Button
+                  onClick={() => setIsDonateModalOpen(true)}
+                  className='w-full cursor-pointer'
+                >Donate</Button>
               </CardContent>
-                
+
               {project.teamMembers && project.teamMembers.length > 0 && (
                 <Card className="flex flex-col justify-start items-start border-none shadow-none">
                   <CardHeader className="w-full">
@@ -636,4 +645,35 @@ function ProjectSkeleton() {
       </main>
     </div>
   );
+}
+
+function DonateModal({setIsDonateModalOpen}: {setIsDonateModalOpen: (open: boolean) => void}) {
+  const [amount, setAmount] = useState<number | string>('')
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="fixed inset-0 bg-neutral-50/10 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-secondary rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-4">Donate to Project</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Support this project by making a donation.
+        </p>
+        <div className="mb-4">
+          <Input
+            type="number"
+            placeholder="Amount in USD"
+            value={amount.toLocaleString()}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
+        {/* Donation form or button goes here */}
+        <div className="flex gap-x-2">
+          <Button className="basis-[68%] cursor-pointer">Donate Now</Button>
+          <Button
+            onClick={() => setIsDonateModalOpen(false)}
+            className="basis-[30%] cursor-pointer">Close</Button>
+        </div>
+      </div>
+    </div>
+  )
 }
