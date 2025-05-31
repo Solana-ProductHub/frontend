@@ -233,15 +233,13 @@ const ProjectCardGrid = () => {
       try {
         setLoading(true)
         const response = await axios.get(`${baseUrl}/api/products/list`)
-        console.log("API Response:", response.data)
 
         if (response.data.status && Array.isArray(response.data.data)) {
           const allProjects = response.data.data
           allProjects.forEach((p: any, i: any) => console.log(`Project[${i}] Status:`, p.status))
 
           // TEMP: no filtering
-          setProjects(allProjects)
-          console.log("Fetched all projects:", allProjects)
+          setProjects(allProjects);
         } else {
           setError("Failed to fetch projects")
         }

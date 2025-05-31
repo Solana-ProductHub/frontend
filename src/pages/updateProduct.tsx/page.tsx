@@ -1,9 +1,9 @@
-import ProjectForm from "@/components/projectForm";
 import WalletConnection from "@/components/wallet";
 import { useNavigate } from "react-router-dom";
 import useUser from "@/hooks/useUser";
+import UpdateProjectForm from "@/components/UpdateProjectForm";
 
-function List() {
+function UpdateProduct() {
   const navigate = useNavigate();
   const { isCheckingUser, showContent } = useUser()
 
@@ -11,7 +11,7 @@ function List() {
     <div className="flex flex-col items-center gap-4 justify-center py-16 w-full h-full">
       <div>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate(-1)}
           style={{
             position: "absolute",
             top: 24,
@@ -27,23 +27,6 @@ function List() {
         >
           ← Back
         </button>
-        <button
-          onClick={() => navigate("/publised")}
-          style={{
-            position: "absolute",
-            top: 24,
-            right: 24,
-            padding: "8px 18px",
-            borderRadius: 6,
-            border: "none",
-            background: "#111111",
-            color: "#fff",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
-        >
-          Published Projects
-        </button>
       </div>
       <div className="w-full h-full flex flex-col items-center justify-center">
         {!showContent && (
@@ -55,9 +38,9 @@ function List() {
         )}
       </div>
       <WalletConnection />
-      {showContent && !isCheckingUser && <ProjectForm />}
+      {showContent && !isCheckingUser && <UpdateProjectForm />}
     </div>
   );
 }
 
-export default List;
+export default UpdateProduct;
