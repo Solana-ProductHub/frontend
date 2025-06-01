@@ -30,7 +30,6 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { toast } from "sonner";
 import { useParams } from "react-router-dom";
 import { useProject } from "@/hooks/useProjects";
-import type { ProductData } from "@/lib/types";
 import useUser from "@/hooks/useUser";
 
 const PRODUCT_STATES = [

@@ -231,7 +231,11 @@ export default function ProjectDetails() {
       {/* Header with Back Button */}
       <div className="sticky top-0 z-10 backdrop-blur-md border-b border-slate-200">
         <div className="container mx-auto px-4 py-4">
-          <Button onClick={() => navigate(-1)} variant="ghost" className="dark:bg-secondary dark:text-white bg-black text-secondary">
+          <Button
+            onClick={() => navigate(-1)}
+            variant="ghost"
+            className="dark:bg-secondary dark:text-white bg-black text-secondary"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Projects
           </Button>
@@ -340,8 +344,7 @@ export default function ProjectDetails() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Twitter className="mr-2 h-4 w-4" />
-                  X
+                  <Twitter className="mr-2 h-4 w-4" />X
                 </a>
               </Button>
             )}
@@ -556,6 +559,7 @@ export default function ProjectDetails() {
           </div>
         </motion.div>
       </main>
+
     </div>
   );
 }
