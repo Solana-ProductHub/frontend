@@ -31,7 +31,7 @@ import useWallet from "@/hooks/useWallet";
 import WalletConnection from "@/components/wallet";
 import type { Connection, Provider } from "@reown/appkit-adapter-solana/react";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
+import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { TREASURY_ADDRESS, USDT_MINT } from "@/lib/constants";
 
 // API Response Types
