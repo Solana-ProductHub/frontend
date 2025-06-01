@@ -711,13 +711,13 @@ function DonateModal({
         return toast.error('No USDT account found for this wallet');
       }
 
-      const usdtBalance = Number(tokenAccountInfo.amount) / 100_000_000; // USDT has 6 decimals
+      const usdtBalance = Number(tokenAccountInfo.amount) / 1_000_000; // USDT has 6 decimals
 
       if (Number(usdtBalance) < Number(amount) || usdtBalance == 0) {
         return toast.error('Insufficient USDT balance');
       }
 
-      const tokenAmount = Math.floor(Number(amount) * 100_000_000); // Convert to smallest unit (6 decimals for USDT)
+      const tokenAmount = Math.floor(Number(amount) * 1_000_000); // Convert to smallest unit (6 decimals for USDT)
       const fee = tokenAmount * 0.01;
       const donationAmount = tokenAmount - fee;
 
