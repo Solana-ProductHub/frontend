@@ -4,13 +4,13 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
 import React, { useMemo } from 'react'
 
-const WalletConnectProvider = ({ children }: {children: React.ReactNode}) => {
+const SolanaProvider = ({ children }: {children: React.ReactNode}) => {
   const network = WalletAdapterNetwork.Devnet;
   const endpoint = useMemo<string>(() => clusterApiUrl(network), [network])
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={[]}>
+      <WalletProvider wallets={[]} autoConnect={true}>
         <WalletModalProvider>
           {children}
         </WalletModalProvider>
@@ -19,4 +19,4 @@ const WalletConnectProvider = ({ children }: {children: React.ReactNode}) => {
   )
 }
 
-export default WalletConnectProvider
+export default SolanaProvider

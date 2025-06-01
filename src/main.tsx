@@ -4,6 +4,7 @@ import "./index.css";
 import AppRoutes from "./routes/Route.tsx";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
+import SolanaProvider from "./providers/SolanaProvider.tsx";
 
 window.addEventListener("unhandledrejection", (event) => {
   if (
@@ -18,9 +19,11 @@ window.addEventListener("unhandledrejection", (event) => {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <AppRoutes />
-      <Toaster />
-    </ThemeProvider>
+    <SolanaProvider>
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <AppRoutes />
+        <Toaster />
+      </ThemeProvider>
+    </SolanaProvider>
   </StrictMode>
 );

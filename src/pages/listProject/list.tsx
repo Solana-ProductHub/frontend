@@ -1,7 +1,7 @@
 import ProjectForm from "@/components/projectForm";
-import WalletConnection from "@/components/wallet";
 import { useNavigate } from "react-router-dom";
 import useUser from "@/hooks/useUser";
+import ConnectButton from "@/components/connectbtn";
 
 function List() {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ function List() {
           </p>
         )}
       </div>
-      <WalletConnection />
+      <ConnectButton />
       {showContent && !isCheckingUser && <ProjectForm />}
     </div>
   );
