@@ -688,6 +688,7 @@ function DonateModal({
       USDT_MINT,
       address
     )
+    console.log("Token Account:", tokenAccount.toBase58())
     return tokenAccount
   }
 
@@ -704,11 +705,18 @@ function DonateModal({
       toast.success('Processing donation...');
 
       // check wallet balance
+      let tokenAccountInfo
       const wallet = new PublicKey(address!);
       const senderTokenAccount = await getUSDAccount(wallet);
-      const tokenAccountInfo = await getAccount(connection, senderTokenAccount);
-      if (!tokenAccountInfo) {
-        return toast.error('No USDT account found for this wallet');
+
+      try {
+        tokenAccountInfo = await getAccount(connection, senderTokenAccount);
+        console.log(tokenAccountInfo)
+      } catch (error) {
+        console.error("Error fetching token account info:", error);
+        toast.error('Deposit USDT to your wallet before donating');
+        setIsLoading(false);
+        return
       }
 
       const usdtBalance = Number(tokenAccountInfo.amount) / 1_000_000; // USDT has 6 decimals
@@ -800,7 +808,8 @@ function DonateModal({
       // store record in backend
 
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'An error occurred while processing the donation');
+      console.log(error)
+      toast.error(error as string);
     } finally {
       setIsLoading(false)
     }
