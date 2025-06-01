@@ -5,7 +5,7 @@ import { clusterApiUrl } from '@solana/web3.js';
 import React, { useMemo } from 'react'
 
 const SolanaProvider = ({ children }: {children: React.ReactNode}) => {
-  const network = WalletAdapterNetwork.Devnet;
+  const network = WalletAdapterNetwork.Mainnet;
   const endpoint = useMemo<string>(() => clusterApiUrl(network), [network])
 
   return (

@@ -2,7 +2,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import type { PublicKey } from '@solana/web3.js'
 
-const ConnectButton = () => {
+const  ConnectButton = () => {
     const { connected, disconnect, publicKey } = useWallet()
     const { setVisible } = useWalletModal()
 
