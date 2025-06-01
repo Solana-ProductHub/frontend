@@ -722,7 +722,7 @@ function DonateModal({
       const usdtBalance = Number(tokenAccountInfo.amount) / 1_000_000; // USDT has 6 decimals
 
       if (Number(usdtBalance) < Number(amount) || usdtBalance == 0) {
-        return toast.error('Insufficient USDT balance');
+        return toast.error('Insufficient USDC balance');
       }
 
       const tokenAmount = Math.floor(Number(amount) * 1_000_000); // Convert to smallest unit (6 decimals for USDT)
