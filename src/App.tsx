@@ -1,12 +1,12 @@
 import './App.css'
-import Navbar from './components/navbar'
+// import Navbar from './components/navbar'
 import Card from './components/productCard'
 
 function App() {
 
   return (
     <>
-      <Navbar />
+      {/* <Navbar /> */}
       <Card />
     </>
   )
