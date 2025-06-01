@@ -134,7 +134,7 @@ export default function UpdateProjectForm() {
         //     ]))
         // }
     }
-  }, [project])   
+  }, [project])
 
   const handleTeamChange = (
     idx: number,
