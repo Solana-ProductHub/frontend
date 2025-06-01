@@ -11,7 +11,7 @@ import {
   Twitter,
   MessageCircle,
   FileText,
-  Wallet,
+  Wallet as WalletIcon,
   Users,
   Info,
   Share2,
@@ -90,8 +90,11 @@ export default function ProjectDetails() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const baseUrl = import.meta.env.VITE_ENDPOINT_URL;
+  const { connected, publicKey, disconnect, sendTransaction } = useWallet();
+  const { connection } = useConnection()
 
   const { walletProvider, address, isConnected, connection } = useWallet();
+
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -250,10 +253,10 @@ export default function ProjectDetails() {
 
       {isDonateModalOpen && (
         <DonateModal
-          walletProvider={walletProvider}
-          address={address}
+          address={publicKey}
           connection={connection}
           projectAddress={project.walletAddress}
+
           setIsDonateModalOpen={setIsDonateModalOpen}
         />
       )}
@@ -473,7 +476,7 @@ export default function ProjectDetails() {
                     Wallet Address
                   </h3>
                   <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group hover:bg-muted transition-colors">
-                    <Wallet className="h-4 w-4 flex-shrink-0 text-primary" />
+                    <WalletIcon className="h-4 w-4 flex-shrink-0 text-primary" />
                     <code className="text-sm flex-1 font-mono truncate">
                       {project.walletAddress.slice(0, 8)}...
                       {project.walletAddress.slice(-6)}
@@ -515,7 +518,7 @@ export default function ProjectDetails() {
                   </div>
                 )}
 
-                {isConnected ? (
+                {connected ? (
                   <Button
                     onClick={() => setIsDonateModalOpen(true)}
                     className="w-full cursor-pointer"
@@ -523,7 +526,7 @@ export default function ProjectDetails() {
                     Donate
                   </Button>
                 ) : (
-                  <WalletConnection />
+                  <ConnectButton />
                 )}
               </CardContent>
 
@@ -681,8 +684,9 @@ function ProjectSkeleton() {
 
 function DonateModal({
   setIsDonateModalOpen,
-  walletProvider,
+  address,
   connection,
+  disconnect,
   projectAddress,
   address,
 }: {
@@ -691,11 +695,13 @@ function DonateModal({
   walletProvider: Provider;
   connection: Connection | undefined;
   setIsDonateModalOpen: (open: boolean) => void;
+
 }) {
   const [amount, setAmount] = useState<number | string>("");
   const [isLoading, setIsLoading] = useState(false);
 
   const getUSDAccount = async (address: PublicKey) => {
+
     const tokenAccount = await getAssociatedTokenAddress(USDC_MINT, address);
     console.log("Token Account:", tokenAccount.toBase58());
     return tokenAccount;
@@ -715,6 +721,7 @@ function DonateModal({
 
       // check wallet balance
       let tokenAccountInfo
+
       const wallet = new PublicKey(address!);
       const senderTokenAccount = await getUSDAccount(wallet);
 
@@ -731,7 +738,9 @@ function DonateModal({
       const usdtBalance = Number(tokenAccountInfo.amount) / 1_000_000; // USDT has 6 decimals
 
       if (Number(usdtBalance) < Number(amount) || usdtBalance == 0) {
+
         return toast.error("Insufficient USDC balance");
+
       }
 
       const tokenAmount = Math.floor(Number(amount) * 1_000_000); // Convert to smallest unit (6 decimals for USDT)
@@ -746,7 +755,7 @@ function DonateModal({
       if (!(await connection.getAccountInfo(recipientAdminATA))) {
         transactionInstructions.push(
           createAssociatedTokenAccountInstruction(
-            wallet,
+            address,
             recipientAdminATA,
             TREASURY_ADDRESS,
             USDC_MINT
@@ -759,7 +768,7 @@ function DonateModal({
       if (!(await connection.getAccountInfo(projectATA))) {
         transactionInstructions.push(
           createAssociatedTokenAccountInstruction(
-            wallet,
+            address,
             projectATA,
             projectWallet,
             USDC_MINT
@@ -771,7 +780,7 @@ function DonateModal({
         createTransferInstruction(
           senderTokenAccount,
           recipientAdminATA,
-          wallet,
+          address,
           fee,
           [],
           TOKEN_PROGRAM_ID
@@ -779,12 +788,13 @@ function DonateModal({
         createTransferInstruction(
           senderTokenAccount,
           projectATA,
-          wallet,
+          address,
           donationAmount,
           [],
           TOKEN_PROGRAM_ID
         )
       );
+
 
       const latestBlockHash = await connection.getLatestBlockhash();
       const transaction = new Transaction().add(...transactionInstructions);
@@ -801,6 +811,7 @@ function DonateModal({
 
       // Confirm the transaction
       console.log("Waiting for transaction confirmation...");
+
       toast.success("Transaction sent, waiting for confirmation...");
       const confirmlatestBlockHash = await connection.getLatestBlockhash();
       const confirmationResult = await connection.confirmTransaction(
@@ -829,6 +840,7 @@ function DonateModal({
     } catch (error) {
       console.log(error)
       toast.error(error as string);
+
     } finally {
       setIsLoading(false);
     }
@@ -860,6 +872,7 @@ function DonateModal({
           <Button
             onClick={donateToProject}
             disabled={isLoading || !amount || Number(amount) <= 0}
+
             className="basis-[68%] cursor-pointer disabled:opacity-[0.5]"
           >
             Donate Now
