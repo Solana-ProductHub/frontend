@@ -26,6 +26,13 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { Input } from "@/components/ui/input";
+import useWallet from "@/hooks/useWallet";
+import WalletConnection from "@/components/wallet";
+import type { Connection, Provider } from "@reown/appkit-adapter-solana/react";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TREASURY_ADDRESS, USDT_MINT } from "@/lib/constants";
 
 // API Response Types
 type TeamMember = {
@@ -69,6 +76,7 @@ type Project = {
 };
 
 export default function ProjectDetails() {
+  const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
@@ -77,6 +85,7 @@ export default function ProjectDetails() {
   const [copied, setCopied] = useState(false);
   const baseUrl = import.meta.env.VITE_ENDPOINT_URL;
 
+  const { walletProvider, address, isConnected, connection } = useWallet()
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -123,6 +132,7 @@ export default function ProjectDetails() {
       toast("Wallet address copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
+      console.log(err)
       toast("Could not copy wallet address");
     }
   };
@@ -231,6 +241,15 @@ export default function ProjectDetails() {
           </Button>
         </div>
       </div>
+
+      {isDonateModalOpen && (
+        <DonateModal
+          walletProvider={walletProvider}
+          address={address}
+          connection={connection}
+          projectAddress={project.walletAddress}
+          setIsDonateModalOpen={setIsDonateModalOpen}/>
+      )}
 
       <main className="mx-auto max-w-6xl mt-4">
         {/* Banner Image */}
@@ -355,7 +374,7 @@ export default function ProjectDetails() {
           <div className="lg:col-span-2">
             {/* Main Content - Always Visible */}
             <div className="space-y-6">
-              <Card className="border border-[1px] flex flex-col justify-start items-start">
+              <Card className="border flex flex-col justify-start items-start">
                 <CardHeader className="pb-2 w-full">
                   <CardTitle className="flex items-center text-left">
                     <Info className="h-5 w-5 mr-2 text-primary" />
@@ -370,7 +389,7 @@ export default function ProjectDetails() {
               </Card>
 
               {project.milestones && project.milestones.length > 0 && (
-                <Card className="border border-[1px] flex flex-col justify-start items-start">
+                <Card className="border flex flex-col justify-start items-start">
                   <CardHeader className="pb-2 w-full">
                     <CardTitle className="flex items-center text-left">
                       <Target className="h-5 w-5 mr-2 text-primary" />
@@ -410,7 +429,7 @@ export default function ProjectDetails() {
               )}
 
               {project.achievements && project.achievements.length > 0 && (
-                <Card className="border border-[1px] flex flex-col justify-start items-start">
+                <Card className="border flex flex-col justify-start items-start">
                   <CardHeader className="pb-2 w-full">
                     <CardTitle className="flex items-center text-left">
                       <Trophy className="h-5 w-5 mr-2 text-primary" />
@@ -437,7 +456,7 @@ export default function ProjectDetails() {
 
           {/* Sidebar */}
           <div className="sticky top-4 space-y-6">
-            <Card className="border border-[1px] sticky top-4">
+            <Card className="border sticky top-4">
               <CardHeader className="pb-2">
                 <CardTitle className="text-left">Project Details</CardTitle>
               </CardHeader>
@@ -487,6 +506,15 @@ export default function ProjectDetails() {
                       </a>
                     </Button>
                   </div>
+                )}
+
+                {isConnected ? (
+                  <Button
+                    onClick={() => setIsDonateModalOpen(true)}
+                    className='w-full cursor-pointer'
+                  >Donate</Button>
+                ) : (
+                  <WalletConnection />
                 )}
               </CardContent>
 
@@ -641,4 +669,177 @@ function ProjectSkeleton() {
       </main>
     </div>
   );
+}
+
+function DonateModal({
+  setIsDonateModalOpen,
+  walletProvider,
+  connection,
+  projectAddress,
+  address
+}: {
+  projectAddress: string,
+  address: string | undefined,
+  walletProvider: Provider,
+  connection: Connection | undefined,
+  setIsDonateModalOpen: (open: boolean) => void,
+}) {
+  const [amount, setAmount] = useState<number | string>('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const getUSDAccount = async (address: PublicKey) => {
+    const tokenAccount = await getAssociatedTokenAddress(
+      USDT_MINT,
+      address
+    )
+    return tokenAccount
+  }
+
+  async function donateToProject() {
+    if (address == undefined || connection == undefined)
+      return toast.error('wallet not connected');
+
+    if (amount == 0 || amount == '') {
+      return toast.error('Provide donation amount')
+    }
+
+    try {
+      setIsLoading(true);
+      toast.success('Processing donation...');
+
+      // check wallet balance
+      const wallet = new PublicKey(address!);
+      const senderTokenAccount = await getUSDAccount(wallet);
+      const tokenAccountInfo = await getAccount(connection, senderTokenAccount);
+      if (!tokenAccountInfo) {
+        return toast.error('No USDT account found for this wallet');
+      }
+
+      const usdtBalance = Number(tokenAccountInfo.amount) / 1_000_000; // USDT has 6 decimals
+
+      if (Number(usdtBalance) < Number(amount) || usdtBalance == 0) {
+        return toast.error('Insufficient USDT balance');
+      }
+
+      const tokenAmount = Math.floor(Number(amount) * 1_000_000); // Convert to smallest unit (6 decimals for USDT)
+      const fee = tokenAmount * 0.01;
+      const donationAmount = tokenAmount - fee;
+
+      // array of instructions
+      const transactionInstructions = [];
+
+      // get admin ata
+      const recipientAdminATA = await getUSDAccount(TREASURY_ADDRESS)
+      if (!await connection.getAccountInfo(recipientAdminATA)) {
+        transactionInstructions.push(
+          createAssociatedTokenAccountInstruction(
+            wallet,
+            recipientAdminATA,
+            TREASURY_ADDRESS,
+            USDT_MINT
+          )
+        )
+      }
+
+      const projectWallet = new PublicKey(projectAddress);
+      const projectATA = await getUSDAccount(projectWallet)
+      if (!await connection.getAccountInfo(projectATA)) {
+        transactionInstructions.push(
+          createAssociatedTokenAccountInstruction(
+            wallet,
+            projectATA,
+            projectWallet,
+            USDT_MINT
+          )
+        )
+      }
+
+      transactionInstructions.push(
+        createTransferInstruction(
+          senderTokenAccount,
+          recipientAdminATA,
+          wallet,
+          fee,
+          [],
+          TOKEN_PROGRAM_ID
+        ),
+        createTransferInstruction(
+          senderTokenAccount,
+          projectATA,
+          wallet,
+          donationAmount,
+          [],
+          TOKEN_PROGRAM_ID
+        )
+      );
+
+      const latestBlockHash = await connection.getLatestBlockhash();
+      const transaction = new Transaction().add(...transactionInstructions)
+      transaction.feePayer = wallet;
+      transaction.recentBlockhash = latestBlockHash?.blockhash;
+
+      const signature = await walletProvider.signAndSendTransaction(transaction)
+      console.log("Transaction signature:", signature);
+      if (!signature) {
+        return toast.error('Transaction failed to send');
+      }
+
+      // Confirm the transaction
+      console.log("Waiting for transaction confirmation...");
+      toast.success('Transaction sent, waiting for confirmation...');
+      const confirmlatestBlockHash = await connection.getLatestBlockhash();
+      const confirmationResult = await connection.confirmTransaction({signature, blockhash: confirmlatestBlockHash.blockhash, lastValidBlockHeight: confirmlatestBlockHash.lastValidBlockHeight}, 'confirmed');
+
+      if (confirmationResult.value.err) {
+          throw new Error(`Transaction failed: ${JSON.stringify(confirmationResult.value.err)}`);
+      }
+
+      console.log(`Transaction signature: ${signature}`);
+      console.log(`Confirmation slot: ${confirmationResult.context.slot}`);
+
+      toast.success('Donation successful! Thank you for your support!');
+      setIsDonateModalOpen(false);
+      setAmount('')
+
+      // store record in backend
+
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'An error occurred while processing the donation');
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={() => setIsDonateModalOpen(false)}
+      className="fixed inset-0 bg-neutral-50/10 backdrop-blur-sm flex items-center justify-center z-50">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-secondary rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-4">Donate to Project</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Support this project by making a donation.
+        </p>
+        <div className="mb-4">
+          <Input
+            type="number"
+            placeholder="Amount in USD"
+            value={amount.toLocaleString()}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
+        {/* Donation form or button goes here */}
+        <div className="flex gap-x-2">
+          <Button
+            onClick={donateToProject}
+            disabled={isLoading || !amount || Number(amount) <= 0}
+            className="basis-[68%] cursor-pointer disabled:opacity-[0.5]">Donate Now</Button>
+          <Button
+            onClick={() => setIsDonateModalOpen(false)}
+            className="basis-[30%] cursor-pointer">Close</Button>
+        </div>
+      </div>
+    </div>
+  )
 }
