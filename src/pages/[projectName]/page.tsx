@@ -31,7 +31,7 @@ import useWallet from "@/hooks/useWallet";
 import WalletConnection from "@/components/wallet";
 import type { Connection, Provider } from "@reown/appkit-adapter-solana/react";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 import { TREASURY_ADDRESS, USDT_MINT } from "@/lib/constants";
 
 // API Response Types
@@ -681,6 +681,7 @@ function DonateModal({
   setIsDonateModalOpen: (open: boolean) => void,
 }) {
   const [amount, setAmount] = useState<number | string>('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const getUSDAccount = async (address: PublicKey) => {
     const tokenAccount = await getAssociatedTokenAddress(
@@ -698,11 +699,18 @@ function DonateModal({
       return toast.error('Provide donation amount')
     }
 
-    // check wallet balance
-    const wallet = new PublicKey(address!);
     try {
+      setIsLoading(true);
+      toast.success('Processing donation...');
+
+      // check wallet balance
+      const wallet = new PublicKey(address!);
       const senderTokenAccount = await getUSDAccount(wallet);
       const tokenAccountInfo = await getAccount(connection, senderTokenAccount);
+      if (!tokenAccountInfo) {
+        return toast.error('No USDT account found for this wallet');
+      }
+
       const usdtBalance = Number(tokenAccountInfo.amount) / 100_000_000; // USDT has 6 decimals
 
       if (Number(usdtBalance) < Number(amount) || usdtBalance == 0) {
@@ -710,7 +718,7 @@ function DonateModal({
       }
 
       const tokenAmount = Math.floor(Number(amount) * 100_000_000); // Convert to smallest unit (6 decimals for USDT)
-      const fee = tokenAmount * 0.1;
+      const fee = tokenAmount * 0.01;
       const donationAmount = tokenAmount - fee;
 
       // array of instructions
@@ -766,7 +774,7 @@ function DonateModal({
       transaction.feePayer = wallet;
       transaction.recentBlockhash = latestBlockHash?.blockhash;
 
-      const signature = await walletProvider.signAndSendTransaction(transaction, {skipPreflight: false})
+      const signature = await walletProvider.signAndSendTransaction(transaction)
       console.log("Transaction signature:", signature);
       if (!signature) {
         return toast.error('Transaction failed to send');
@@ -774,17 +782,27 @@ function DonateModal({
 
       // Confirm the transaction
       console.log("Waiting for transaction confirmation...");
-      const confirmedTx = await connection.confirmTransaction(signature, 'confirmed');
-      if (confirmedTx.value.err) {
-        console.error("Transaction failed:", confirmedTx.value.err);
-        return toast.error('Transaction failed');
+      toast.success('Transaction sent, waiting for confirmation...');
+      const confirmlatestBlockHash = await connection.getLatestBlockhash();
+      const confirmationResult = await connection.confirmTransaction({signature, blockhash: confirmlatestBlockHash.blockhash, lastValidBlockHeight: confirmlatestBlockHash.lastValidBlockHeight}, 'confirmed');
+
+      if (confirmationResult.value.err) {
+          throw new Error(`Transaction failed: ${JSON.stringify(confirmationResult.value.err)}`);
       }
+
+      console.log(`Transaction signature: ${signature}`);
+      console.log(`Confirmation slot: ${confirmationResult.context.slot}`);
 
       toast.success('Donation successful! Thank you for your support!');
       setIsDonateModalOpen(false);
+      setAmount('')
+
+      // store record in backend
+
     } catch (error) {
-        console.log(error)
-        return toast.error('Deposit USDT to your wallet before donating');
+      toast.error(error instanceof Error ? error.message : 'An error occurred while processing the donation');
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -811,7 +829,8 @@ function DonateModal({
         <div className="flex gap-x-2">
           <Button
             onClick={donateToProject}
-            className="basis-[68%] cursor-pointer">Donate Now</Button>
+            disabled={isLoading || !amount || Number(amount) <= 0}
+            className="basis-[68%] cursor-pointer disabled:opacity-[0.5]">Donate Now</Button>
           <Button
             onClick={() => setIsDonateModalOpen(false)}
             className="basis-[30%] cursor-pointer">Close</Button>
