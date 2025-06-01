@@ -26,16 +26,6 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { Input } from "@/components/ui/input";
-import { useAppKitAccount } from "@reown/appkit/react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import WalletConnection from "@/components/wallet";
 
 // API Response Types
 type TeamMember = {
@@ -87,20 +77,6 @@ export default function ProjectDetails() {
   const [copied, setCopied] = useState(false);
   const baseUrl = import.meta.env.VITE_ENDPOINT_URL;
 
-  const [donateOpen, setDonateOpen] = useState(false);
-  const [donationAmount, setDonationAmount] = useState("");
-  const [donateLoading, setDonateLoading] = useState(false);
-  const [donateError, setDonateError] = useState<string | null>(null);
-  const [donateSuccess, setDonateSuccess] = useState<string | null>(null);
-
-  const { address, isConnected } = useAppKitAccount();
-
-  useEffect(() => {
-    if (isConnected && donateOpen === false && donationAmount === "") {
-      setDonateOpen(true);
-    }
-    // eslint-disable-next-line
-  }, [isConnected]);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -553,98 +529,9 @@ export default function ProjectDetails() {
               )}
             </Card>
           </div>
-          <div className="w-full">
-            {!isConnected ? (
-              <WalletConnection />
-            ) : (
-              <Button
-                className="mt-4 w-full"
-                onClick={() => setDonateOpen(true)}
-              >
-                Support Product
-              </Button>
-            )}
-          </div>
         </motion.div>
       </main>
 
-      <Dialog open={donateOpen} onOpenChange={setDonateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Support {project.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <div className="font-medium">Project Wallet Address</div>
-              <div className="bg-muted px-2 py-1 rounded text-xs break-all">
-                {project.walletAddress}
-              </div>
-            </div>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Amount in USDC"
-              value={donationAmount}
-              onChange={(e) => setDonationAmount(e.target.value)}
-            />
-            {donateError && (
-              <div className="text-red-500 text-sm">{donateError}</div>
-            )}
-            {donateSuccess && (
-              <div className="text-green-600 text-sm">{donateSuccess}</div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              disabled={donateLoading}
-              onClick={async () => {
-                setDonateError(null);
-                setDonateSuccess(null);
-                if (!address) {
-                  setDonateError("Please connect your wallet.");
-                  return;
-                }
-                if (
-                  !donationAmount ||
-                  isNaN(Number(donationAmount)) ||
-                  Number(donationAmount) <= 0
-                ) {
-                  setDonateError("Enter a valid donation amount.");
-                  return;
-                }
-                setDonateLoading(true);
-                try {
-                  const res = await fetch(
-                    `${baseUrl}/api/products/${project.userId}/${project.uuid}/donate`,
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        donationAmount: Number(donationAmount),
-                        donator: address,
-                      }),
-                    }
-                  );
-                  const data = await res.json();
-                  if (data.status) {
-                    setDonateSuccess("Thank you for your support!");
-                    setDonationAmount("");
-                  } else {
-                    setDonateError(data.message || "Donation failed.");
-                  }
-                } catch (err) {
-                  setDonateError("Donation failed. Please try again.");
-                } finally {
-                  setDonateLoading(false);
-                }
-              }}
-            >
-              {donateLoading ? "Processing..." : "Support"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

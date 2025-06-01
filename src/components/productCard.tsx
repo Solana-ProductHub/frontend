@@ -264,9 +264,8 @@ const ProjectCardGrid = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        setLoading(true);
-        const response = await axios.get(`${baseUrl}/api/products/list`);
-        console.log("API Response:", response.data);
+        setLoading(true)
+        const response = await axios.get(`${baseUrl}/api/products/list`)
 
         if (response.data.status && Array.isArray(response.data.data)) {
           const allProjects = response.data.data;
@@ -275,9 +274,8 @@ const ProjectCardGrid = () => {
           );
 
           // TEMP: no filtering
-          setProjects(allProjects);
-          setFilteredProjects(response.data.data);
-          console.log("Fetched all projects:", allProjects);
+          setProjects(allProjects)
+          console.log("Fetched all projects:", allProjects)
         } else {
           setError("Failed to fetch projects");
         }
