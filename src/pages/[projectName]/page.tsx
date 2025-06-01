@@ -31,8 +31,14 @@ import useWallet from "@/hooks/useWallet";
 import WalletConnection from "@/components/wallet";
 import type { Connection, Provider } from "@reown/appkit-adapter-solana/react";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { TREASURY_ADDRESS, USDT_MINT } from "@/lib/constants";
+import {
+  getAccount,
+  getAssociatedTokenAddress,
+  createTransferInstruction,
+  createAssociatedTokenAccountInstruction,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { TREASURY_ADDRESS, USDC_MINT } from "@/lib/constants";
 
 // API Response Types
 type TeamMember = {
@@ -85,7 +91,7 @@ export default function ProjectDetails() {
   const [copied, setCopied] = useState(false);
   const baseUrl = import.meta.env.VITE_ENDPOINT_URL;
 
-  const { walletProvider, address, isConnected, connection } = useWallet()
+  const { walletProvider, address, isConnected, connection } = useWallet();
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -132,7 +138,7 @@ export default function ProjectDetails() {
       toast("Wallet address copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.log(err)
+      console.log(err);
       toast("Could not copy wallet address");
     }
   };
@@ -248,7 +254,8 @@ export default function ProjectDetails() {
           address={address}
           connection={connection}
           projectAddress={project.walletAddress}
-          setIsDonateModalOpen={setIsDonateModalOpen}/>
+          setIsDonateModalOpen={setIsDonateModalOpen}
+        />
       )}
 
       <main className="mx-auto max-w-6xl mt-4">
@@ -511,8 +518,10 @@ export default function ProjectDetails() {
                 {isConnected ? (
                   <Button
                     onClick={() => setIsDonateModalOpen(true)}
-                    className='w-full cursor-pointer'
-                  >Donate</Button>
+                    className="w-full cursor-pointer"
+                  >
+                    Donate
+                  </Button>
                 ) : (
                   <WalletConnection />
                 )}
@@ -559,7 +568,6 @@ export default function ProjectDetails() {
           </div>
         </motion.div>
       </main>
-
     </div>
   );
 }
@@ -676,49 +684,54 @@ function DonateModal({
   walletProvider,
   connection,
   projectAddress,
-  address
+  address,
 }: {
-  projectAddress: string,
-  address: string | undefined,
-  walletProvider: Provider,
-  connection: Connection | undefined,
-  setIsDonateModalOpen: (open: boolean) => void,
+  projectAddress: string;
+  address: string | undefined;
+  walletProvider: Provider;
+  connection: Connection | undefined;
+  setIsDonateModalOpen: (open: boolean) => void;
 }) {
-  const [amount, setAmount] = useState<number | string>('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [amount, setAmount] = useState<number | string>("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const getUSDAccount = async (address: PublicKey) => {
-    const tokenAccount = await getAssociatedTokenAddress(
-      USDT_MINT,
-      address
-    )
-    return tokenAccount
-  }
+    const tokenAccount = await getAssociatedTokenAddress(USDC_MINT, address);
+    console.log("Token Account:", tokenAccount.toBase58());
+    return tokenAccount;
+  };
 
   async function donateToProject() {
     if (address == undefined || connection == undefined)
-      return toast.error('wallet not connected');
+      return toast.error("wallet not connected");
 
-    if (amount == 0 || amount == '') {
-      return toast.error('Provide donation amount')
+    if (amount == 0 || amount == "") {
+      return toast.error("Provide donation amount");
     }
 
     try {
       setIsLoading(true);
-      toast.success('Processing donation...');
+      toast.success("Processing donation...");
 
       // check wallet balance
+      let tokenAccountInfo
       const wallet = new PublicKey(address!);
       const senderTokenAccount = await getUSDAccount(wallet);
-      const tokenAccountInfo = await getAccount(connection, senderTokenAccount);
-      if (!tokenAccountInfo) {
-        return toast.error('No USDT account found for this wallet');
+
+      try {
+        tokenAccountInfo = await getAccount(connection, senderTokenAccount);
+        console.log(tokenAccountInfo);
+      } catch (error) {
+        console.error("Error fetching token account info:", error);
+        toast.error("Deposit USDC to your wallet before donating");
+        setIsLoading(false);
+        return;
       }
 
       const usdtBalance = Number(tokenAccountInfo.amount) / 1_000_000; // USDT has 6 decimals
 
       if (Number(usdtBalance) < Number(amount) || usdtBalance == 0) {
-        return toast.error('Insufficient USDT balance');
+        return toast.error("Insufficient USDC balance");
       }
 
       const tokenAmount = Math.floor(Number(amount) * 1_000_000); // Convert to smallest unit (6 decimals for USDT)
@@ -729,29 +742,29 @@ function DonateModal({
       const transactionInstructions = [];
 
       // get admin ata
-      const recipientAdminATA = await getUSDAccount(TREASURY_ADDRESS)
-      if (!await connection.getAccountInfo(recipientAdminATA)) {
+      const recipientAdminATA = await getUSDAccount(TREASURY_ADDRESS);
+      if (!(await connection.getAccountInfo(recipientAdminATA))) {
         transactionInstructions.push(
           createAssociatedTokenAccountInstruction(
             wallet,
             recipientAdminATA,
             TREASURY_ADDRESS,
-            USDT_MINT
+            USDC_MINT
           )
-        )
+        );
       }
 
       const projectWallet = new PublicKey(projectAddress);
-      const projectATA = await getUSDAccount(projectWallet)
-      if (!await connection.getAccountInfo(projectATA)) {
+      const projectATA = await getUSDAccount(projectWallet);
+      if (!(await connection.getAccountInfo(projectATA))) {
         transactionInstructions.push(
           createAssociatedTokenAccountInstruction(
             wallet,
             projectATA,
             projectWallet,
-            USDT_MINT
+            USDC_MINT
           )
-        )
+        );
       }
 
       transactionInstructions.push(
@@ -774,49 +787,62 @@ function DonateModal({
       );
 
       const latestBlockHash = await connection.getLatestBlockhash();
-      const transaction = new Transaction().add(...transactionInstructions)
+      const transaction = new Transaction().add(...transactionInstructions);
       transaction.feePayer = wallet;
       transaction.recentBlockhash = latestBlockHash?.blockhash;
 
-      const signature = await walletProvider.signAndSendTransaction(transaction)
+      const signature = await walletProvider.signAndSendTransaction(
+        transaction
+      );
       console.log("Transaction signature:", signature);
       if (!signature) {
-        return toast.error('Transaction failed to send');
+        return toast.error("Transaction failed to send");
       }
 
       // Confirm the transaction
       console.log("Waiting for transaction confirmation...");
-      toast.success('Transaction sent, waiting for confirmation...');
+      toast.success("Transaction sent, waiting for confirmation...");
       const confirmlatestBlockHash = await connection.getLatestBlockhash();
-      const confirmationResult = await connection.confirmTransaction({signature, blockhash: confirmlatestBlockHash.blockhash, lastValidBlockHeight: confirmlatestBlockHash.lastValidBlockHeight}, 'confirmed');
+      const confirmationResult = await connection.confirmTransaction(
+        {
+          signature,
+          blockhash: confirmlatestBlockHash.blockhash,
+          lastValidBlockHeight: confirmlatestBlockHash.lastValidBlockHeight,
+        },
+        "confirmed"
+      );
 
       if (confirmationResult.value.err) {
-          throw new Error(`Transaction failed: ${JSON.stringify(confirmationResult.value.err)}`);
+        throw new Error(
+          `Transaction failed: ${JSON.stringify(confirmationResult.value.err)}`
+        );
       }
 
       console.log(`Transaction signature: ${signature}`);
       console.log(`Confirmation slot: ${confirmationResult.context.slot}`);
 
-      toast.success('Donation successful! Thank you for your support!');
+      toast.success("Donation successful! Thank you for your support!");
       setIsDonateModalOpen(false);
-      setAmount('')
+      setAmount("");
 
       // store record in backend
-
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'An error occurred while processing the donation');
+      console.log(error)
+      toast.error(error as string);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   return (
     <div
       onClick={() => setIsDonateModalOpen(false)}
-      className="fixed inset-0 bg-neutral-50/10 backdrop-blur-sm flex items-center justify-center z-50">
+      className="fixed inset-0 bg-neutral-50/10 backdrop-blur-sm flex items-center justify-center z-50"
+    >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-secondary rounded-lg shadow-lg p-6 w-full max-w-md">
+        className="bg-white dark:bg-secondary rounded-lg shadow-lg p-6 w-full max-w-md"
+      >
         <h2 className="text-xl font-semibold mb-4">Donate to Project</h2>
         <p className="text-sm text-muted-foreground mb-6">
           Support this project by making a donation.
@@ -824,7 +850,7 @@ function DonateModal({
         <div className="mb-4">
           <Input
             type="number"
-            placeholder="Amount in USD"
+            placeholder="Amount in USDC-Sol"
             value={amount.toLocaleString()}
             onChange={(e) => setAmount(e.target.value)}
           />
@@ -834,12 +860,18 @@ function DonateModal({
           <Button
             onClick={donateToProject}
             disabled={isLoading || !amount || Number(amount) <= 0}
-            className="basis-[68%] cursor-pointer disabled:opacity-[0.5]">Donate Now</Button>
+            className="basis-[68%] cursor-pointer disabled:opacity-[0.5]"
+          >
+            Donate Now
+          </Button>
           <Button
             onClick={() => setIsDonateModalOpen(false)}
-            className="basis-[30%] cursor-pointer">Close</Button>
+            className="basis-[30%] cursor-pointer"
+          >
+            Close
+          </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }
