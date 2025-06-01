@@ -28,10 +28,11 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { toast } from "sonner";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useProject } from "@/hooks/useProjects";
-import type { ProductData } from "@/lib/types";
+import type { ProductAchievements, ProductData, ProductMilestones, ProductTeamMembers } from "@/lib/types";
 import useUser from "@/hooks/useUser";
+import { formatISOToDateInput } from "@/lib/utils";
 
 const PRODUCT_STATES = [
   "Ideas",
@@ -41,22 +42,6 @@ const PRODUCT_STATES = [
 ];
 
 const TRACKS = ["Defi", "Gaming", "Ai", "DePin", "Infra", "Consumers"];
-
-type TeamMember = {
-  name: string;
-  xHandle: string;
-};
-
-type Milestone = {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-};
-
-type Achievement = {
-  description: string;
-};
 
 const formSchema = z.object({
   productName: z.string().min(1, "Product name is required"),
@@ -74,17 +59,18 @@ const formSchema = z.object({
 export default function UpdateProjectForm() {
   let params = useParams();
   const { user } = useUser();
+  const navigate = useNavigate();
   const projectName = params?.projectName || "";
   const { isFechingProject, project } = useProject(projectName);
   const [bannerURI, setBanner] = useState<File | null>(null);
   const [logoURI, setLogo] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [team, setTeam] = useState<TeamMember[]>([{ name: "", xHandle: "" }]);
-  const [milestones, setMilestones] = useState<Milestone[]>([
+  const [team, setTeam] = useState<ProductTeamMembers[]>([{ name: "", xHandle: "" }]);
+  const [milestones, setMilestones] = useState<ProductMilestones[]>([
     { title: "", description: "", startDate: "", endDate: "" },
   ]);
-  const [achievements, setAchievements] = useState<Achievement[]>([
+  const [achievements, setAchievements] = useState<ProductAchievements[]>([
     { description: "" },
   ]);
   const { isConnected, address } = useAppKitAccount();
@@ -125,21 +111,29 @@ export default function UpdateProjectForm() {
         form.setValue("documentation", project?.documentationURL || "");
         form.setValue("wallet", project?.walletAddress || "");
 
-        // Set Team
+      // Set Team
         setTeam(project.teamMembers);
 
-        // if (project.milestones) {
-        //     setMilestones(props => ([
-        //         ...props,
-        //         ...project.milestones
-        //     ]))
-        // }
+        // Set milestones if it exists
+        if (project?.milestones?.length) {
+          const parsedMilestones = project.milestones.map(m => ({
+            ...m,
+            startDate: formatISOToDateInput(m.startDate),
+            endDate: formatISOToDateInput(m.endDate)
+          }))
+          setMilestones(parsedMilestones);
+        }
+
+        // Set achievements if it exists
+        if (project?.achievements?.length) {
+          setAchievements(project.achievements);
+        }
     }
   }, [project])   
 
   const handleTeamChange = (
     idx: number,
-    field: keyof TeamMember,
+    field: keyof ProductTeamMembers,
     value: string
   ) => {
     const updatedTeam = [...team];
@@ -149,7 +143,7 @@ export default function UpdateProjectForm() {
 
   const handleMilestoneChange = (
     idx: number,
-    field: keyof Milestone,
+    field: keyof ProductMilestones,
     value: string
   ) => {
     const updatedMilestones = [...milestones];
@@ -159,7 +153,7 @@ export default function UpdateProjectForm() {
 
   const handleAchievementChange = (
     idx: number,
-    field: keyof Achievement,
+    field: keyof ProductAchievements,
     value: string
   ) => {
     const updatedAchievements = [...achievements];
@@ -216,8 +210,6 @@ export default function UpdateProjectForm() {
       return;
     }
 
-    console.log("submitting");
-
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -248,17 +240,17 @@ export default function UpdateProjectForm() {
 
       // Append arrays as JSON strings
       if (team.length) {
-          formData.append(
-            "teamMembers",
-            JSON.stringify(
-              team
-                .filter((member) => member.name && member.xHandle)
-                .map((member) => ({
-                  name: member.name,
-                  xHandle: member.xHandle,
-                }))
-            )
-          );
+        formData.append(
+          "teamMembers",
+          JSON.stringify(
+            team
+              .filter((member) => member.name && member.xHandle)
+              .map((member) => ({
+                name: member.name,
+                xHandle: member.xHandle,
+              }))
+          )
+        );
       }
 
       // Append if it exists
@@ -300,17 +292,19 @@ export default function UpdateProjectForm() {
       );
 
       const createResult = createRes.data;
-      console.log(createRes);
 
       if (!createResult.status) {
         throw new Error(createResult.message || "Failed to create product");
       }
 
       // Reset form on success
-      toast("Project successfully listed!");
-      window.location.reload();
+      toast("Project successfully updated!");
+      
+      setTimeout(() => {
+        // Redirect to project detail page
+        navigate(`/project/${createResult.data.name}`)
+      }, 1500)
     } catch (err: any) {
-      console.error("Form submission error:", err);
       setSubmitError(err.message || "An error occurred while submitting.");
     } finally {
       setIsSubmitting(false);

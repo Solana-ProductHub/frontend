@@ -26,6 +26,7 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { useProject } from "@/hooks/useProjects";
 
 // API Response Types
 type TeamMember = {
@@ -71,49 +72,12 @@ type Project = {
 export default function ProjectDetails() {
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    isFechingProject: loading,
+    error,
+    project
+  } = useProject(decodeURIComponent(name as string));
   const [copied, setCopied] = useState(false);
-  const baseUrl = import.meta.env.VITE_ENDPOINT_URL;
-
-  useEffect(() => {
-    const fetchProject = async () => {
-      if (!name) {
-        setError("No project name provided");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        console.log("Fetching project with name:", name);
-        const productName = decodeURIComponent(name);
-        // Directly fetch project details using the project name
-        const response = await axios.get(
-          `${baseUrl}/api/products/${productName}`
-        );
-        console.log("API response:", response.data);
-        if (response.data && response.data.data) {
-          setProject(response.data.data);
-        } else {
-          setError("Project not found");
-        }
-      } catch (err) {
-        console.error("Error fetching project:", err);
-        if (axios.isAxiosError(err) && err.response?.status === 404) {
-          setError("Project not found");
-        } else {
-          setError("An error occurred while fetching project details");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProject();
-  }, [name, baseUrl]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -196,7 +160,7 @@ export default function ProjectDetails() {
       </div>
     );
   }
-  console.log("Current project state:", project);
+  
   if (!project) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
@@ -351,7 +315,7 @@ export default function ProjectDetails() {
           <div className="lg:col-span-2">
             {/* Main Content - Always Visible */}
             <div className="space-y-6">
-              <Card className="border border-[1px] flex flex-col justify-start items-start">
+              <Card className="border flex flex-col justify-start items-start">
                 <CardHeader className="pb-2 w-full">
                   <CardTitle className="flex items-center text-left">
                     <Info className="h-5 w-5 mr-2 text-primary" />

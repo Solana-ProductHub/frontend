@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import useUser from "./useUser";
 import type { ProductApiResponse, ProductData } from "@/lib/types";
 
-export const useUserProject = () => {
+export const useUserProjects = () => {
     const [loading, setLoading] = useState(true);
     const [projects, setProjects] = useState<ProductData[]>([]);
     const [error, setError] = useState<string | null>(null);
