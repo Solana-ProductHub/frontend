@@ -28,6 +28,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const PRODUCT_STATES = [
   "Ideas",
@@ -68,6 +69,7 @@ const formSchema = z.object({
 });
 
 export default function ProjectForm() {
+  const navigate = useNavigate();
   const [bannerURI, setBanner] = useState<File | null>(null);
   const [logoURI, setLogo] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
@@ -181,8 +183,6 @@ export default function ProjectForm() {
       return;
     }
 
-    console.log("submitting");
-
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -290,7 +290,11 @@ export default function ProjectForm() {
 
       // Reset form on success
       toast("Project successfully listed!");
-      window.location.reload();
+
+      setTimeout(() => {
+        // Redirect to list page
+        navigate("/");
+      }, 1500)
     } catch (err: any) {
       console.error("Form submission error:", err);
       setSubmitError(err.message || "An error occurred while submitting.");
