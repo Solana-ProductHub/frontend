@@ -8,10 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
-  Twitter,
-  MessageCircle,
   FileText,
-  Wallet,
+  Wallet as WalletIcon,
   Users,
   Info,
   Share2,
@@ -27,6 +25,17 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { useProject } from "@/hooks/useProjects";
+import { Input } from "@/components/ui/input";
+import { Connection, PublicKey, Transaction, VersionedTransaction, type TransactionSignature } from "@solana/web3.js";
+import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TREASURY_ADDRESS, USDC_MINT } from "@/lib/constants";
+import ConnectButton from "@/components/connectbtn";
+import { useConnection, useWallet } from '@solana/wallet-adapter-react'
+import type { SendTransactionOptions } from "@solana/wallet-adapter-base";
+
+import XIcon from '@mui/icons-material/X';
+import TelegramIcon from '@mui/icons-material/Telegram';
+
 
 // API Response Types
 type TeamMember = {
@@ -70,6 +79,7 @@ type Project = {
 };
 
 export default function ProjectDetails() {
+  const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
   const {
@@ -79,6 +89,51 @@ export default function ProjectDetails() {
   } = useProject(decodeURIComponent(name as string));
   const [copied, setCopied] = useState(false);
 
+  const baseUrl = import.meta.env.VITE_ENDPOINT_URL;
+  const { connected, publicKey, disconnect, sendTransaction } = useWallet();
+  const { connection } = useConnection()
+
+  // const { walletProvider, address, isConnected, connection } = useWallet()
+
+  useEffect(() => {
+    const fetchProject = async () => {
+      if (!name) {
+        setError("No project name provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("Fetching project with name:", name);
+        const productName = decodeURIComponent(name);
+        // Directly fetch project details using the project name
+        const response = await axios.get(
+          `${baseUrl}/api/products/${productName}`
+        );
+        console.log("API response:", response.data);
+        if (response.data && response.data.data) {
+          setProject(response.data.data);
+        } else {
+          setError("Project not found");
+        }
+      } catch (err) {
+        console.error("Error fetching project:", err);
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
+          setError("Project not found");
+        } else {
+          setError("An error occurred while fetching project details");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProject();
+  }, [name, baseUrl]);
+
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -86,6 +141,7 @@ export default function ProjectDetails() {
       toast("Wallet address copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
+      console.log(err)
       toast("Could not copy wallet address");
     }
   };
@@ -191,6 +247,16 @@ export default function ProjectDetails() {
         </div>
       </div>
 
+      {isDonateModalOpen && (
+        <DonateModal
+          address={publicKey}
+          connection={connection}
+          projectAddress={project.walletAddress}
+          sendTransaction={sendTransaction}
+          disconnect={disconnect}
+          setIsDonateModalOpen={setIsDonateModalOpen}/>
+      )}
+
       <main className="mx-auto max-w-6xl mt-4">
         {/* Banner Image */}
         <motion.div
@@ -284,8 +350,7 @@ export default function ProjectDetails() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Twitter className="mr-2 h-4 w-4" />
-                  X
+                  <XIcon fontSize="inherit" />
                 </a>
               </Button>
             )}
@@ -297,8 +362,7 @@ export default function ProjectDetails() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Telegram
+                  <TelegramIcon fontSize='inherit' />
                 </a>
               </Button>
             )}
@@ -330,7 +394,7 @@ export default function ProjectDetails() {
               </Card>
 
               {project.milestones && project.milestones.length > 0 && (
-                <Card className="border border-[1px] flex flex-col justify-start items-start">
+                <Card className="border flex flex-col justify-start items-start">
                   <CardHeader className="pb-2 w-full">
                     <CardTitle className="flex items-center text-left">
                       <Target className="h-5 w-5 mr-2 text-primary" />
@@ -370,7 +434,7 @@ export default function ProjectDetails() {
               )}
 
               {project.achievements && project.achievements.length > 0 && (
-                <Card className="border border-[1px] flex flex-col justify-start items-start">
+                <Card className="border flex flex-col justify-start items-start">
                   <CardHeader className="pb-2 w-full">
                     <CardTitle className="flex items-center text-left">
                       <Trophy className="h-5 w-5 mr-2 text-primary" />
@@ -397,7 +461,7 @@ export default function ProjectDetails() {
 
           {/* Sidebar */}
           <div className="sticky top-4 space-y-6">
-            <Card className="border border-[1px] sticky top-4">
+            <Card className="border sticky top-4">
               <CardHeader className="pb-2">
                 <CardTitle className="text-left">Project Details</CardTitle>
               </CardHeader>
@@ -407,7 +471,7 @@ export default function ProjectDetails() {
                     Wallet Address
                   </h3>
                   <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group hover:bg-muted transition-colors">
-                    <Wallet className="h-4 w-4 flex-shrink-0 text-primary" />
+                    <WalletIcon className="h-4 w-4 flex-shrink-0 text-primary" />
                     <code className="text-sm flex-1 font-mono truncate">
                       {project.walletAddress.slice(0, 8)}...
                       {project.walletAddress.slice(-6)}
@@ -448,8 +512,17 @@ export default function ProjectDetails() {
                     </Button>
                   </div>
                 )}
+
+                {connected ? (
+                  <Button
+                    onClick={() => setIsDonateModalOpen(true)}
+                    className='w-full cursor-pointer'
+                  >Donate</Button>
+                ) : (
+                  <ConnectButton />
+                )}
               </CardContent>
-                
+
               {project.teamMembers && project.teamMembers.length > 0 && (
                 <Card className="flex flex-col justify-start items-start border-none shadow-none">
                   <CardHeader className="w-full">
@@ -600,4 +673,190 @@ function ProjectSkeleton() {
       </main>
     </div>
   );
+}
+
+function DonateModal({
+  setIsDonateModalOpen,
+  address,
+  connection,
+  disconnect,
+  projectAddress,
+  sendTransaction
+}: {
+  projectAddress: string,
+  address: PublicKey | null,
+  disconnect: () => Promise<void>,
+  connection: Connection | undefined,
+  setIsDonateModalOpen: (open: boolean) => void,
+  sendTransaction: (transaction: Transaction | VersionedTransaction, connection: Connection, options?: SendTransactionOptions) => Promise<TransactionSignature>
+}) {
+  const [amount, setAmount] = useState<number | string>('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const getUSDAccount = async (address: PublicKey) => {
+    const tokenAccount = await getAssociatedTokenAddress(
+      USDC_MINT,
+      address
+    )
+    console.log(USDC_MINT.toBase58(), address.toBase58())
+    console.log("Token Account:", tokenAccount.toBase58())
+    return tokenAccount
+  }
+
+  async function donateToProject() {
+    if (address == null || connection == null) {
+      return toast.error('wallet not connected');
+    }
+
+    if (amount == 0 || amount == '') {
+      return toast.error('Provide donation amount')
+    }
+
+    try {
+      setIsLoading(true);
+      toast.success('Processing donation...');
+
+      // check wallet balance
+      let tokenAccountInfo
+      const senderTokenAccount = await getUSDAccount(address);
+      try {
+        tokenAccountInfo = await getAccount(connection, senderTokenAccount);
+      } catch (error) {
+        console.error("Error fetching token account info:", error);
+        toast.error('Deposit USDC to your wallet before donating');
+        setIsLoading(false);
+        return
+      }
+
+      const usdtBalance = Number(tokenAccountInfo.amount) / 1_000_000; // USDT has 6 decimals
+
+      if (Number(usdtBalance) < Number(amount) || usdtBalance == 0) {
+        return toast.error('Insufficient USDC balance');
+      }
+
+      const tokenAmount = Math.floor(Number(amount) * 1_000_000); // Convert to smallest unit (6 decimals for USDT)
+      const fee = tokenAmount * 0.01;
+      const donationAmount = tokenAmount - fee;
+
+      // array of instructions
+      const transactionInstructions = [];
+
+      // get admin ata
+      const recipientAdminATA = await getUSDAccount(TREASURY_ADDRESS)
+      if (!await connection.getAccountInfo(recipientAdminATA)) {
+        transactionInstructions.push(
+          createAssociatedTokenAccountInstruction(
+            address,
+            recipientAdminATA,
+            TREASURY_ADDRESS,
+            USDC_MINT
+          )
+        )
+      }
+
+      const projectWallet = new PublicKey(projectAddress);
+      const projectATA = await getUSDAccount(projectWallet)
+      if (!await connection.getAccountInfo(projectATA)) {
+        transactionInstructions.push(
+          createAssociatedTokenAccountInstruction(
+            address,
+            projectATA,
+            projectWallet,
+            USDC_MINT
+          )
+        )
+      }
+
+      transactionInstructions.push(
+        createTransferInstruction(
+          senderTokenAccount,
+          recipientAdminATA,
+          address,
+          fee,
+          [],
+          TOKEN_PROGRAM_ID
+        ),
+        createTransferInstruction(
+          senderTokenAccount,
+          projectATA,
+          address,
+          donationAmount,
+          [],
+          TOKEN_PROGRAM_ID
+        )
+      );
+
+      // send the transaction
+      const transaction = new Transaction().add(...transactionInstructions)
+      const signature = await sendTransaction(transaction, connection)
+      console.log("Transaction signature:", signature);
+      if (!signature) {
+        return toast.error('Transaction failed to send');
+      }
+
+      // Confirm the transaction
+      console.log("Waiting for transaction confirmation...");
+      toast.success('Transaction sent, waiting for confirmation...');
+      const latestBlockhash = await connection.getLatestBlockhash();
+      const confirmationResult = await connection.confirmTransaction({
+        signature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      })
+
+      if (!confirmationResult) {
+        toast.error('Transaction confirmation failed');
+        setIsLoading(false);
+        return
+      }
+
+      toast.success('Donation successful! Thank you for your support!');
+      setIsDonateModalOpen(false);
+      setAmount('')
+      disconnect();
+
+      // store record in backend
+
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={() => setIsDonateModalOpen(false)}
+      className="fixed inset-0 bg-neutral-50/10 backdrop-blur-sm flex items-center justify-center z-50">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-secondary rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-4">Donate to Project</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Support this project by making a donation.
+        </p>
+        <div className="mb-4">
+          <Input
+            type="number"
+            placeholder="Amount in USD"
+            value={amount.toLocaleString()}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
+        {/* Donation form or button goes here */}
+        <div className="flex gap-x-2">
+          <Button
+            onClick={donateToProject}
+            disabled={isLoading || !amount || Number(amount) <= 0}
+            className="basis-[68%] cursor-pointer disabled:opacity-[0.8] flex gap-x-2 items-center">
+              {isLoading && (<span className="inline-block w-3 h-3 border-3 border-transparent border-t-neutral-700 border-l-neutral-700 animate-spin rounded-full"></span>)}
+              <span>Donate Now</span>
+            </Button>
+          <Button
+            onClick={() => setIsDonateModalOpen(false)}
+            className="basis-[30%] cursor-pointer">Close</Button>
+        </div>
+      </div>
+    </div>
+  )
 }

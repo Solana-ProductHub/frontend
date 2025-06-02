@@ -1,14 +1,15 @@
 import ProjectForm from "@/components/projectForm";
-import WalletConnection from "@/components/wallet";
 import { useNavigate } from "react-router-dom";
-import useUser from "@/hooks/useUser";
+import ConnectButton from "@/components/connectbtn";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 function List() {
   const navigate = useNavigate();
-  const { isCheckingUser, showContent } = useUser()
+  const { connected } = useWallet();
 
   return (
     <div className="flex flex-col items-center gap-4 justify-center py-16 w-full h-full">
+      {/* Navigation buttons */}
       <div>
         <button
           onClick={() => navigate("/")}
@@ -45,17 +46,20 @@ function List() {
           Published Projects
         </button>
       </div>
-      <div className="w-full h-full flex flex-col items-center justify-center">
-        {!showContent && (
-          <p className="mb-4 text-center text-gray-600 max-w-md">
-            {isCheckingUser
-              ? "Verifying your wallet information..."
-              : "Please connect your wallet to list your project! Connecting your wallet helps us verify your identity and enables secure project submissions."}
-          </p>
-        )}
+
+      {/* Always show ConnectButton at the top */}
+      <div className="mb-8">
+        <ConnectButton />
       </div>
-      <WalletConnection />
-      {showContent && !isCheckingUser && <ProjectForm />}
+
+      {/* Conditional rendering */}
+      {!connected ? (
+        <p className="mb-4 text-center text-gray-600 max-w-md">
+          Please connect your wallet...
+        </p>
+      ) : (
+        <ProjectForm />
+      )}
     </div>
   );
 }
