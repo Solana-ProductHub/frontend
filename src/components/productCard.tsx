@@ -29,8 +29,8 @@ import {
   SheetHeader,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import XIcon from '@mui/icons-material/X';
-import TelegramIcon from '@mui/icons-material/Telegram';
+import XIcon from "@mui/icons-material/X";
+import TelegramIcon from "@mui/icons-material/Telegram";
 
 // API Response Types
 type TeamMember = {
@@ -206,7 +206,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                   className="h-8 w-8 cursor-pointer text-[#1da1f2] hover:text-[#1da1f2]/80 hover:bg-[#1da1f2]/10"
                   onClick={(e) => handleSocialClick(e, project.twitterURL!)}
                 >
-                  <XIcon fontSize='inherit' />
+                  <XIcon fontSize="inherit" />
                 </Button>
               )}
 
@@ -217,7 +217,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                   className="h-8 w-8 cursor-pointer text-[#0088cc] hover:text-[#0088cc]/80 hover:bg-[#0088cc]/10"
                   onClick={(e) => handleSocialClick(e, project.telegramURL!)}
                 >
-                  <TelegramIcon fontSize='inherit' />
+                  <TelegramIcon fontSize="inherit" />
                 </Button>
               )}
 
@@ -356,20 +356,106 @@ const ProjectCardGrid = () => {
 
   if (projects.length === 0) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <div className="text-6xl mb-4">🚀</div>
-            <h3 className="text-xl font-semibold text-slate-900">
-              No Published Projects Yet!
-            </h3>
-            <p className="text-muted-foreground max-w-md">
-              There are currently no published projects to display. Check back
-              later for exciting new projects!
-            </p>
+      <>
+        <nav className="w-full flex items-center justify-between px-6 py-3 border-b">
+          {/* Logo */}
+          <div className="font-bold text-xl text-primary">
+            <img src={logo} alt="Logo" className="h-10 w-auto rounded-full" />
+          </div>
+
+          {/* Search Bar */}
+          <div className="flex-1 justify-center px-4 hidden md:flex">
+            <Input
+              type="search"
+              placeholder="Search products by name..."
+              className="max-w-md w-full"
+              value={searchQuery}
+              onChange={handleSearchInputChange}
+            />
+            <Button
+              onClick={handleSearchClick}
+              className="ml-2"
+              variant="outline"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* List Product Button */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Button
+              onClick={() => navigate("/list")}
+              className="dark:bg-secondary dark:text-white bg-black text-secondary"
+            >
+              List your product
+            </Button>
+
+            <ModeToggle />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex md:hidden items-center space-x-4">
+              <ModeToggle />
+            </div>
+            {/* Mobile Menu */}
+
+            <div className="md:hidden flex items-center space-x-2">
+              <Sheet>
+                <SheetTrigger>
+                  <Menu />
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetDescription className="gap-2 flex flex-col ">
+                      <div className="flex-1 flex justify-center mt-6">
+                        <Input
+                          type="search"
+                          placeholder="Search products by name..."
+                          className="max-w-md w-full"
+                          value={searchQuery}
+                          onChange={handleSearchInputChange}
+                        />
+                        <Button
+                          onClick={handleSearchClick}
+                          className="ml-2"
+                          variant="outline"
+                        >
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* List Product Button */}
+                      <div className="flex items-center space-x-4">
+                        <Button
+                          onClick={() => navigate("/list")}
+                          className="dark:bg-secondary dark:text-white bg-black text-secondary"
+                        >
+                          List your product
+                        </Button>
+
+                        <ModeToggle />
+                      </div>
+                    </SheetDescription>
+                  </SheetHeader>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+        </nav>
+        <div className="container mx-auto py-8 px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center space-y-4">
+              <div className="text-6xl mb-4">🚀</div>
+              <h3 className="text-xl font-semibold text-slate-900">
+                No Published Projects Yet!
+              </h3>
+              <p className="text-muted-foreground max-w-md">
+                There are currently no published projects to display. Check back
+                later for exciting new projects! or go ahead and list yours!
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
