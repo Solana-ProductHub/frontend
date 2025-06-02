@@ -445,7 +445,7 @@ const ProjectCardGrid = () => {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center space-y-4">
               <div className="text-6xl mb-4">🚀</div>
-              <h3 className="text-xl font-semibold text-slate-900">
+              <h3 className="text-xl font-semibold dark:text-white text-slate-900">
                 No Published Projects Yet!
               </h3>
               <p className="text-muted-foreground max-w-md">

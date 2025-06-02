@@ -31,7 +31,7 @@ import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router-dom";
 import { useProject } from "@/hooks/useProjects";
 
-import type { ProductAchievements, ProductData, ProductMilestones, ProductTeamMembers } from "@/lib/types";
+import type { ProductAchievements, ProductMilestones, ProductTeamMembers } from "@/lib/types";
 
 import useUser from "@/hooks/useUser";
 import { formatISOToDateInput } from "@/lib/utils";

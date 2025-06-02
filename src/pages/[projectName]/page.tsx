@@ -21,14 +21,12 @@ import {
   Calendar,
   CheckCircle2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import axios from "axios";
 import { useProject } from "@/hooks/useProjects";
 import { Input } from "@/components/ui/input";
 import { Connection, PublicKey, Transaction, VersionedTransaction, type TransactionSignature } from "@solana/web3.js";
 import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { TREASURY_ADDRESS, USDC_MINT } from "@/lib/constants";
 import ConnectButton from "@/components/connectbtn";
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import type { SendTransactionOptions } from "@solana/wallet-adapter-base";
@@ -36,47 +34,8 @@ import type { SendTransactionOptions } from "@solana/wallet-adapter-base";
 import XIcon from '@mui/icons-material/X';
 import TelegramIcon from '@mui/icons-material/Telegram';
 
+import { TREASURY_ADDRESS, USDC_MINT } from "@/lib/constants";
 
-// API Response Types
-type TeamMember = {
-  name: string;
-  xHandle: string;
-};
-
-type Milestone = {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-};
-
-type Achievement = {
-  description: string;
-};
-
-type Project = {
-  id: number;
-  uuid: string;
-  name: string;
-  bDescription: string;
-  description: string;
-  logoURI: string;
-  bannerURI: string;
-  state: string;
-  track: string;
-  walletAddress: string;
-  twitterURL?: string;
-  telegramURL?: string;
-  websiteURL?: string;
-  documentationURL?: string;
-  status: "PENDING" | "DECLINED" | "PUBLISHED";
-  teamMembers: TeamMember[];
-  milestones: Milestone[];
-  achievements: Achievement[];
-  createdAt: string;
-  updatedAt: string;
-  userId: number;
-};
 
 export default function ProjectDetails() {
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
@@ -89,49 +48,8 @@ export default function ProjectDetails() {
   } = useProject(decodeURIComponent(name as string));
   const [copied, setCopied] = useState(false);
 
-  const baseUrl = import.meta.env.VITE_ENDPOINT_URL;
   const { connected, publicKey, disconnect, sendTransaction } = useWallet();
   const { connection } = useConnection()
-
-  // const { walletProvider, address, isConnected, connection } = useWallet()
-
-  useEffect(() => {
-    const fetchProject = async () => {
-      if (!name) {
-        setError("No project name provided");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        console.log("Fetching project with name:", name);
-        const productName = decodeURIComponent(name);
-        // Directly fetch project details using the project name
-        const response = await axios.get(
-          `${baseUrl}/api/products/${productName}`
-        );
-        console.log("API response:", response.data);
-        if (response.data && response.data.data) {
-          setProject(response.data.data);
-        } else {
-          setError("Project not found");
-        }
-      } catch (err) {
-        console.error("Error fetching project:", err);
-        if (axios.isAxiosError(err) && err.response?.status === 404) {
-          setError("Project not found");
-        } else {
-          setError("An error occurred while fetching project details");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProject();
-  }, [name, baseUrl]);
 
 
   const copyToClipboard = async (text: string) => {
