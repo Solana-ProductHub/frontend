@@ -9,18 +9,28 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
-  Twitter,
-  MessageCircle,
   Globe,
   FileText,
   ArrowUpRight,
   Loader2,
   Search,
+  Menu,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { ModeToggle } from "./mode-toggle";
 import { Input } from "./ui/input";
+import logo from "@/assets/logo.png";
+
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import XIcon from '@mui/icons-material/X';
+import TelegramIcon from '@mui/icons-material/Telegram';
 
 // API Response Types
 type TeamMember = {
@@ -196,7 +206,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                   className="h-8 w-8 cursor-pointer text-[#1da1f2] hover:text-[#1da1f2]/80 hover:bg-[#1da1f2]/10"
                   onClick={(e) => handleSocialClick(e, project.twitterURL!)}
                 >
-                  <Twitter className="h-4 w-4" />
+                  <XIcon fontSize='inherit' />
                 </Button>
               )}
 
@@ -207,7 +217,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                   className="h-8 w-8 cursor-pointer text-[#0088cc] hover:text-[#0088cc]/80 hover:bg-[#0088cc]/10"
                   onClick={(e) => handleSocialClick(e, project.telegramURL!)}
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <TelegramIcon fontSize='inherit' />
                 </Button>
               )}
 
@@ -215,7 +225,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 cursor-pointer text-slate-600 hover:text-slate-600/80 hover:bg-slate-100"
+                  className="h-8 w-8 cursor-pointer text-[#8a55bf]/80 hover:text-[#8a55bf]/60 hover:bg-slate-100"
                   onClick={(e) => handleSocialClick(e, project.websiteURL!)}
                 >
                   <Globe className="h-4 w-4" />
@@ -226,7 +236,7 @@ const ProjectCard = ({ project, onClick }: CardProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 cursor-pointer text-slate-600 hover:text-slate-600/80 hover:bg-slate-100"
+                  className="h-8 w-8 cursor-pointer text-[#8a55bf]/70 hover:text-[#8a55bf]/60 hover:bg-slate-100"
                   onClick={(e) =>
                     handleSocialClick(e, project.documentationURL!)
                   }
@@ -264,8 +274,8 @@ const ProjectCardGrid = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        setLoading(true)
-        const response = await axios.get(`${baseUrl}/api/products/list`)
+        setLoading(true);
+        const response = await axios.get(`${baseUrl}/api/products/list`);
 
         if (response.data.status && Array.isArray(response.data.data)) {
           const allProjects = response.data.data;
@@ -274,8 +284,8 @@ const ProjectCardGrid = () => {
           );
 
           // TEMP: no filtering
-          setProjects(allProjects)
-          console.log("Fetched all projects:", allProjects)
+          setProjects(allProjects);
+          console.log("Fetched all projects:", allProjects);
         } else {
           setError("Failed to fetch projects");
         }
@@ -367,10 +377,12 @@ const ProjectCardGrid = () => {
     <div className="container mx-auto pb-8 px-4">
       <nav className="w-full flex items-center justify-between px-6 py-3 border-b">
         {/* Logo */}
-        <div className="font-bold text-xl text-primary">ProHub</div>
+        <div className="font-bold text-xl text-primary">
+          <img src={logo} alt="Logo" className="h-10 w-auto rounded-full" />
+        </div>
 
         {/* Search Bar */}
-        <div className="flex-1 flex justify-center px-4">
+        <div className="flex-1 justify-center px-4 hidden md:flex">
           <Input
             type="search"
             placeholder="Search products by name..."
@@ -378,13 +390,17 @@ const ProjectCardGrid = () => {
             value={searchQuery}
             onChange={handleSearchInputChange}
           />
-          <Button onClick={handleSearchClick} className="ml-2" variant="outline">
+          <Button
+            onClick={handleSearchClick}
+            className="ml-2"
+            variant="outline"
+          >
             <Search className="h-4 w-4" />
           </Button>
         </div>
 
         {/* List Product Button */}
-        <div className="flex items-center space-x-4">
+        <div className="hidden md:flex items-center space-x-4">
           <Button
             onClick={() => navigate("/list")}
             className="dark:bg-secondary dark:text-white bg-black text-secondary"
@@ -393,6 +409,54 @@ const ProjectCardGrid = () => {
           </Button>
 
           <ModeToggle />
+        </div>
+        <div className="flex gap-2">
+          <div className="flex md:hidden items-center space-x-4">
+            <ModeToggle />
+          </div>
+          {/* Mobile Menu */}
+
+          <div className="md:hidden flex items-center space-x-2">
+            <Sheet>
+              <SheetTrigger>
+                <Menu />
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetDescription className="gap-2 flex flex-col ">
+                    <div className="flex-1 flex justify-center mt-6">
+                      <Input
+                        type="search"
+                        placeholder="Search products by name..."
+                        className="max-w-md w-full"
+                        value={searchQuery}
+                        onChange={handleSearchInputChange}
+                      />
+                      <Button
+                        onClick={handleSearchClick}
+                        className="ml-2"
+                        variant="outline"
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* List Product Button */}
+                    <div className="flex items-center space-x-4">
+                      <Button
+                        onClick={() => navigate("/list")}
+                        className="dark:bg-secondary dark:text-white bg-black text-secondary"
+                      >
+                        List your product
+                      </Button>
+
+                      <ModeToggle />
+                    </div>
+                  </SheetDescription>
+                </SheetHeader>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </nav>
       <div className="mb-8 mt-4">

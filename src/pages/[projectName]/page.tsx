@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
-  Twitter,
-  MessageCircle,
   FileText,
   Wallet as WalletIcon,
   Users,
@@ -33,6 +31,9 @@ import { TREASURY_ADDRESS, USDC_MINT } from "@/lib/constants";
 import ConnectButton from "@/components/connectbtn";
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import type { SendTransactionOptions } from "@solana/wallet-adapter-base";
+
+import XIcon from '@mui/icons-material/X';
+import TelegramIcon from '@mui/icons-material/Telegram';
 
 // API Response Types
 type TeamMember = {
@@ -343,8 +344,7 @@ export default function ProjectDetails() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Twitter className="mr-2 h-4 w-4" />
-                  X
+                  <XIcon fontSize="inherit" />
                 </a>
               </Button>
             )}
@@ -356,8 +356,7 @@ export default function ProjectDetails() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Telegram
+                  <TelegramIcon fontSize='inherit' />
                 </a>
               </Button>
             )}
