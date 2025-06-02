@@ -693,6 +693,7 @@ function DonateModal({
       USDC_MINT,
       address
     )
+    console.log(USDC_MINT.toBase58(), address.toBase58())
     console.log("Token Account:", tokenAccount.toBase58())
     return tokenAccount
   }
@@ -713,10 +714,8 @@ function DonateModal({
       // check wallet balance
       let tokenAccountInfo
       const senderTokenAccount = await getUSDAccount(address);
-
       try {
         tokenAccountInfo = await getAccount(connection, senderTokenAccount);
-        console.log(tokenAccountInfo)
       } catch (error) {
         console.error("Error fetching token account info:", error);
         toast.error('Deposit USDC to your wallet before donating');
