@@ -1,4 +1,4 @@
-import { useUserProject } from "@/hooks/useProjects";
+import { useUserProjects } from "@/hooks/useProjects";
 import { Link } from "react-router-dom";
 
 
@@ -7,7 +7,7 @@ function MyProjects() {
     loading,
     error,
     projects
-  } = useUserProject();
+  } = useUserProjects();
 
   if (loading) return <p className="text-center mt-10">Loading user projects...</p>;
   if (error) return <p className="text-center mt-10 text-red-500">Error: {error}</p>;

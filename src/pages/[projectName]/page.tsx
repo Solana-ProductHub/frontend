@@ -24,6 +24,7 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { useProject } from "@/hooks/useProjects";
 import { Input } from "@/components/ui/input";
 import { Connection, PublicKey, Transaction, VersionedTransaction, type TransactionSignature } from "@solana/web3.js";
 import { getAccount, getAssociatedTokenAddress, createTransferInstruction, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -34,6 +35,7 @@ import type { SendTransactionOptions } from "@solana/wallet-adapter-base";
 
 import XIcon from '@mui/icons-material/X';
 import TelegramIcon from '@mui/icons-material/Telegram';
+
 
 // API Response Types
 type TeamMember = {
@@ -80,10 +82,13 @@ export default function ProjectDetails() {
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    isFechingProject: loading,
+    error,
+    project
+  } = useProject(decodeURIComponent(name as string));
   const [copied, setCopied] = useState(false);
+
   const baseUrl = import.meta.env.VITE_ENDPOINT_URL;
   const { connected, publicKey, disconnect, sendTransaction } = useWallet();
   const { connection } = useConnection()
@@ -127,6 +132,7 @@ export default function ProjectDetails() {
 
     fetchProject();
   }, [name, baseUrl]);
+
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -210,7 +216,7 @@ export default function ProjectDetails() {
       </div>
     );
   }
-  console.log("Current project state:", project);
+  
   if (!project) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">

@@ -44,19 +44,27 @@ export type ProductData = {
   telegramURL?: string;
   websiteURL?: string;
   status: ProductDataRole;
-  documentationURL?: string;
+  documentationURL: string;
   bannerURI: string;
-  teamMembers: Array<{ 
-      name: string; 
-      xHandle: string 
-  }>;
-  milestones?: Array<{ 
-    title: string; 
-    description: string;
-    startDate: Date;
-    endDate: Date; 
-  }>;
-  achievements?: Array<{ description: string }>;
+  teamMembers: Array<ProductTeamMembers>;
+  milestones?: Array<ProductMilestones>;
+  achievements?: Array<ProductAchievements>;
+}
+
+export type ProductTeamMembers = { 
+  name: string; 
+  xHandle: string 
+}
+
+export type ProductMilestones = { 
+  title: string; 
+  description: string;
+  startDate: string;
+  endDate: string; 
+}
+
+export type ProductAchievements = {
+  description: string;
 }
 
 export interface UserApiResponse {
