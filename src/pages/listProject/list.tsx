@@ -1,11 +1,11 @@
 import ProjectForm from "@/components/projectForm";
 import { useNavigate } from "react-router-dom";
-import ConnectButton from "@/components/connectbtn";
-import { useWallet } from "@solana/wallet-adapter-react";
+import ConnectButton from "@/components/connectbtn"
+import useUser from "@/hooks/useUser";
 
 function List() {
   const navigate = useNavigate();
-  const { connected } = useWallet();
+  const { connected } = useUser();
 
   return (
     <div className="flex flex-col items-center gap-4 justify-center py-16 w-full h-full">

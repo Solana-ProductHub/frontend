@@ -26,9 +26,9 @@ import { Minus, Plus, PlusIcon, Calendar } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useAppKitAccount } from "@reown/appkit/react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import useUser from "@/hooks/useUser";
 
 const PRODUCT_STATES = [
   "Ideas",
@@ -70,6 +70,7 @@ const formSchema = z.object({
 
 export default function ProjectForm() {
   const navigate = useNavigate();
+  const { connected, address } = useUser();
   const [bannerURI, setBanner] = useState<File | null>(null);
   const [logoURI, setLogo] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
@@ -81,7 +82,6 @@ export default function ProjectForm() {
   const [achievements, setAchievements] = useState<Achievement[]>([
     { description: "" },
   ]);
-  const { isConnected, address } = useAppKitAccount();
 
   const [_submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -178,7 +178,7 @@ export default function ProjectForm() {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!isConnected || !address) {
+    if (!connected || !address) {
       setSubmitError("Wallet not connected");
       return;
     }
@@ -282,7 +282,6 @@ export default function ProjectForm() {
       );
 
       const createResult = createRes.data;
-      console.log(createRes);
 
       if (!createResult.status) {
         throw new Error(createResult.message || "Failed to create product");

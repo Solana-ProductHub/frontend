@@ -616,8 +616,6 @@ function DonateModal({
       USDC_MINT,
       address
     )
-    console.log(USDC_MINT.toBase58(), address.toBase58())
-    console.log("Token Account:", tokenAccount.toBase58())
     return tokenAccount
   }
 

@@ -26,14 +26,13 @@ import { Minus, Plus, PlusIcon, Calendar } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useAppKitAccount } from "@reown/appkit/react";
 import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router-dom";
 import { useProject } from "@/hooks/useProjects";
+import useUser from "@/hooks/useUser";
 
 import type { ProductAchievements, ProductMilestones, ProductTeamMembers } from "@/lib/types";
 
-import useUser from "@/hooks/useUser";
 import { formatISOToDateInput } from "@/lib/utils";
 
 const PRODUCT_STATES = [
@@ -60,7 +59,7 @@ const formSchema = z.object({
 
 export default function UpdateProjectForm() {
   let params = useParams();
-  const { user } = useUser();
+  const { connected, address, user } = useUser();
   const navigate = useNavigate();
   const projectName = params?.projectName || "";
   const { isFechingProject, project } = useProject(projectName);
@@ -75,7 +74,6 @@ export default function UpdateProjectForm() {
   const [achievements, setAchievements] = useState<ProductAchievements[]>([
     { description: "" },
   ]);
-  const { isConnected, address } = useAppKitAccount();
 
   const [_submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -207,7 +205,7 @@ export default function UpdateProjectForm() {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!isConnected || !address) {
+    if (!connected || !address) {
       setSubmitError("Wallet not connected");
       return;
     }

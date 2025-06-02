@@ -20,10 +20,6 @@ export const InfoList = ({ hash, signedMsg, balance }: InfoListProps) => {
     const events = useAppKitEvents()
     const walletInfo = useWalletInfo()
 
-    useEffect(() => {
-        console.log("Events: ", events);
-    }, [events]);
-
   return (
     < >
         {balance && (

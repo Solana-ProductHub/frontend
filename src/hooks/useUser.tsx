@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useWallet } from "@solana/wallet-adapter-react";
 import type { UserApiResponse, User } from '@/lib/types';
 
 const useUser = () => {
   const [showContent, setShowContent] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingUser, setIsCheckingUser] = useState(false);
-  const { address, isConnected } = useAppKitAccount();
+  const { connected: isConnected, publicKey } = useWallet();
 
   const fetchConnectedUser = useCallback(async () => {
-    if (!address) return;
+    if (!publicKey) return;
 
     setIsCheckingUser(true);
     try {
@@ -18,7 +18,7 @@ const useUser = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ walletAddress: address }),
+        body: JSON.stringify({ walletAddress: publicKey.toString() }),
       });
 
       if (!response.ok) {
@@ -36,10 +36,10 @@ const useUser = () => {
     } finally {
       setIsCheckingUser(false);
     }
-  }, [address]);
+  }, [publicKey]);
 
   useEffect(() => {
-    if (!isConnected || !address) return;
+    if (!isConnected || !publicKey) return;
 
     let isMounted = true;
     fetchConnectedUser().then(() => {
@@ -49,13 +49,15 @@ const useUser = () => {
     return () => {
       isMounted = false;
     };
-  }, [isConnected, address, fetchConnectedUser]);
+  }, [isConnected, publicKey, fetchConnectedUser]);
 
   return useMemo(
     () => ({
       isCheckingUser,
       showContent,
       user,
+      connected: isConnected,
+      address: publicKey?.toString()
     }),
     [isCheckingUser, showContent, user]
   );
